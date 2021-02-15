@@ -4,15 +4,14 @@
 
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:apple_maps_flutter/apple_maps_flutter.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'page.dart';
-import 'dart:ui' as ui;
 
 class PlaceAnnotationClusteredPage extends ExamplePage {
   PlaceAnnotationClusteredPage()
@@ -38,13 +37,13 @@ class PlaceAnnotationClusteredBodyState
   PlaceAnnotationClusteredBodyState();
   static final LatLng center = const LatLng(-33.86711, 151.1947171);
 
-  AppleMapController controller;
+  AppleMapController? controller;
   Map<AnnotationId, Annotation> annotations = <AnnotationId, Annotation>{};
-  AnnotationId selectedAnnotation;
+  AnnotationId selectedAnnotation = AnnotationId('selected_annotation');
   int _annotationIdCounter = 1;
-  BitmapDescriptor _annotationIcon;
-  BitmapDescriptor _iconFromBytes;
-  double _devicePixelRatio = 3.0;
+  BitmapDescriptor? _annotationIcon;
+  BitmapDescriptor? _iconFromBytes;
+  final double _devicePixelRatio = 3.0;
 
   void _onMapCreated(AppleMapController controller) {
     this.controller = controller;
@@ -56,17 +55,14 @@ class PlaceAnnotationClusteredBodyState
   }
 
   void _onAnnotationTapped(AnnotationId annotationId) {
-    final Annotation tappedAnnotation = annotations[annotationId];
-    if (tappedAnnotation != null) {
-      setState(() {
-        if (annotations.containsKey(selectedAnnotation)) {
-          final Annotation resetOld =
-              annotations[selectedAnnotation].copyWith();
-          annotations[selectedAnnotation] = resetOld;
-        }
-        selectedAnnotation = annotationId;
-      });
-    }
+    // final Annotation tappedAnnotation = annotations[annotationId] ;
+    setState(() {
+      if (annotations.containsKey(selectedAnnotation)) {
+        final Annotation resetOld = annotations[selectedAnnotation]!.copyWith();
+        annotations[selectedAnnotation] = resetOld;
+      }
+      selectedAnnotation = annotationId;
+    });
   }
 
   void _add(String iconType) {
@@ -87,8 +83,8 @@ class PlaceAnnotationClusteredBodyState
           : iconType == 'pin'
               ? BitmapDescriptor.defaultAnnotation
               : iconType == 'customAnnotationFromBytes'
-                  ? _iconFromBytes
-                  : _annotationIcon,
+                  ? _iconFromBytes ?? BitmapDescriptor.defaultAnnotation
+                  : _annotationIcon ?? BitmapDescriptor.defaultAnnotation,
       position: LatLng(
         center.latitude + sin(_annotationIdCounter * pi / 6.0) / 20.0,
         center.longitude + cos(_annotationIdCounter * pi / 6.0) / 20.0,
@@ -109,15 +105,7 @@ class PlaceAnnotationClusteredBodyState
   }
 
   Future<void> _createAnnotationImageFromAsset(
-      BuildContext context, double devicelPixelRatio) async {
-    if (_annotationIcon == null) {
-      final ImageConfiguration imageConfiguration =
-          ImageConfiguration(devicePixelRatio: devicelPixelRatio);
-      BitmapDescriptor.fromAssetImage(
-              imageConfiguration, 'assets/red_square.png')
-          .then(_updateBitmap);
-    }
-  }
+      BuildContext context, double devicelPixelRatio) async {}
 
   void _updateBitmap(BitmapDescriptor bitmap) {
     setState(() {
@@ -131,7 +119,7 @@ class PlaceAnnotationClusteredBodyState
         targetWidth: width);
     ui.FrameInfo fi = await codec.getNextFrame();
     _iconFromBytes = BitmapDescriptor.fromBytes(
-        (await fi.image.toByteData(format: ui.ImageByteFormat.png))
+        (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
             .buffer
             .asUint8List());
   }
@@ -157,7 +145,7 @@ class PlaceAnnotationClusteredBodyState
               ),
             ),
           ),
-          FlatButton(
+          MaterialButton(
             child: const Text('customAnnotation from bytes'),
             onPressed: () => _add('customAnnotationFromBytes'),
           ),

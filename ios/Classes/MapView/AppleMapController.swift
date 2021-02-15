@@ -29,8 +29,6 @@ public class AppleMapViewFactory: NSObject, FlutterPlatformViewFactory {
     }
 }
 
-let isClusteringEnabled = true
-
 public class AppleMapController : NSObject, FlutterPlatformView, MKMapViewDelegate {
     var mapView: FlutterMapView!
     var registrar: FlutterPluginRegistrar

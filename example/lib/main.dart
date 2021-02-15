@@ -22,6 +22,7 @@ import 'package:apple_maps_flutter_example/move_camera.dart';
 import 'package:apple_maps_flutter_example/padding.dart';
 import 'package:apple_maps_flutter_example/page.dart';
 import 'package:apple_maps_flutter_example/place_annotation.dart';
+import 'package:apple_maps_flutter_example/place_annotation_clustered.dart';
 import 'package:apple_maps_flutter_example/place_circle.dart';
 import 'package:apple_maps_flutter_example/place_polygon.dart';
 import 'package:apple_maps_flutter_example/place_polyline.dart';

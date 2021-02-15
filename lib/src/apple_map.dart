@@ -41,12 +41,11 @@ class AppleMap extends StatefulWidget {
     this.onCameraIdle,
     this.onTap,
     this.onLongPress,
-
     this.enableClustering = false,
-        this.snapshotOptions,
+    this.snapshotOptions,
     this.insetsLayoutMarginsFromSafeArea = true,
-  })  : 
-        super(key: key);
+    this.enableClustering = false,
+  }) : super(key: key);
 
   final MapCreatedCallback? onMapCreated;
 
@@ -167,7 +166,6 @@ class AppleMap extends StatefulWidget {
   /// native controls.
   final EdgeInsets padding;
 
-
   /// Enables or disables MapKit native clustering.
   ///
   /// Warning: Experimental. This feature has only been tested with custom icon annotations.
@@ -179,6 +177,10 @@ class AppleMap extends StatefulWidget {
   /// automatically to reflect the safe area.
   final bool insetsLayoutMarginsFromSafeArea;
 
+  /// Enables or disables MapKit native clustering.
+  ///
+  /// Warning: Experimental. This feature has only been tested with custom icon annotations.
+  final bool enableClustering;
 
   @override
   State createState() => _AppleMapState();

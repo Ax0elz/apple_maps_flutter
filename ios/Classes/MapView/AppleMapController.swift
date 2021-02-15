@@ -8,7 +8,6 @@
 import Foundation
 import MapKit
 
-
 public class AppleMapViewFactory: NSObject, FlutterPlatformViewFactory {
     
     var registrar: FlutterPluginRegistrar
@@ -30,11 +29,10 @@ public class AppleMapViewFactory: NSObject, FlutterPlatformViewFactory {
     }
 }
 
+let isClusteringEnabled = true
 
-public class AppleMapController: NSObject, FlutterPlatformView {
-    var contentView: UIView
-    var mapView: FlutterMapView
-
+public class AppleMapController : NSObject, FlutterPlatformView, MKMapViewDelegate {
+    var mapView: FlutterMapView!
     var registrar: FlutterPluginRegistrar
     var channel: FlutterMethodChannel
     var initialCameraPosition: [String: Any]
@@ -63,7 +61,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         
         self.mapView.delegate = self
         
-
         if isClusteringEnabled {
             if #available(iOS 11.0, *) {
                 mapView.register(
@@ -75,7 +72,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
             }
         }
         
-
         self.mapView.setCenterCoordinate(initialCameraPosition, animated: false)
         self.setMethodCallHandlers()
         
@@ -94,7 +90,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     public func view() -> UIView {
-
         return mapView
     }
     
@@ -164,8 +159,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         if self.currentlySelectedAnnotation != nil {
             self.channel.invokeMethod("infoWindow#onTap", arguments: ["annotationId": self.currentlySelectedAnnotation!])
         }
-
-
     }
     
     private func setMethodCallHandlers() {

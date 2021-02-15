@@ -9,15 +9,11 @@ import MapKit
 
 @available(iOS 11.0, *)
 class ClusterableAnnotationView: MKAnnotationView {
-    
-    var lastAnnotation: FlutterAnnotation?
-    
     override var annotation: MKAnnotation? {
         didSet {
-            guard let mapItem = annotation as? FlutterAnnotation, mapItem != lastAnnotation else { return }
-            clusteringIdentifier = "apple_maps_flutter_ci"
+            guard let mapItem = annotation as? FlutterAnnotation else { return }
+            clusteringIdentifier = "MapItem"
             image = mapItem.icon.image
-            lastAnnotation = mapItem
         }
     }
 }

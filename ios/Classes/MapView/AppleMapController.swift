@@ -8,9 +8,33 @@
 import Foundation
 import MapKit
 
+
+public class AppleMapViewFactory: NSObject, FlutterPlatformViewFactory {
+    
+    var registrar: FlutterPluginRegistrar
+    
+    public init(withRegistrar registrar: FlutterPluginRegistrar){
+        self.registrar = registrar
+        super.init()
+    }
+    
+    public func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> FlutterPlatformView {
+        let argsDictionary =  args as! Dictionary<String, Any>
+        
+        return AppleMapController(withFrame: frame, withRegistrar: registrar, withargs: argsDictionary, withId: viewId)
+        
+    }
+    
+    public func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
+        return FlutterStandardMessageCodec(readerWriter: FlutterStandardReaderWriter())
+    }
+}
+
+
 public class AppleMapController: NSObject, FlutterPlatformView {
     var contentView: UIView
     var mapView: FlutterMapView
+
     var registrar: FlutterPluginRegistrar
     var channel: FlutterMethodChannel
     var initialCameraPosition: [String: Any]
@@ -18,6 +42,8 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     var currentlySelectedAnnotation: String?
     var snapShotOptions: MKMapSnapshotter.Options = MKMapSnapshotter.Options()
     var snapShot: MKMapSnapshotter?
+    
+    var isClusteringEnabled = false
     
     public init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withargs args: Dictionary<String, Any> ,withId id: Int64) {
         self.options = args["options"] as! [String: Any]
@@ -32,11 +58,24 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         mapView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         
         self.initialCameraPosition = args["initialCameraPosition"]! as! Dictionary<String, Any>
-        
+        self.isClusteringEnabled = args["clusteringEnabled"] as! Bool
         super.init()
         
         self.mapView.delegate = self
         
+
+        if isClusteringEnabled {
+            if #available(iOS 11.0, *) {
+                mapView.register(
+                    ClusterableAnnotationView.self,
+                    forAnnotationViewWithReuseIdentifier: MKMapViewDefaultAnnotationViewReuseIdentifier)
+                mapView.register(
+                    ClusterAnnotationView.self,
+                    forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
+            }
+        }
+        
+
         self.mapView.setCenterCoordinate(initialCameraPosition, animated: false)
         self.setMethodCallHandlers()
         
@@ -55,7 +94,78 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     public func view() -> UIView {
-        return contentView
+
+        return mapView
+    }
+    
+    // onIdle
+    public func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        self.channel.invokeMethod("camera#onIdle", arguments: "")
+    }
+    
+    // onMoveStarted
+    public func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+        self.channel.invokeMethod("camera#onMoveStarted", arguments: "")
+    }
+    
+    public func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView)  {
+        let annotationCandidate: MKAnnotation?
+        print("didSelectView called")
+        
+        if #available(iOS 11.0, *) {
+            if let cluster = view.annotation as? MKClusterAnnotation {
+                annotationCandidate = cluster.memberAnnotations.first
+            } else {
+                annotationCandidate = view.annotation
+            }
+        } else {
+            annotationCandidate = view.annotation
+        }
+        
+        guard let annotation :FlutterAnnotation = annotationCandidate as? FlutterAnnotation else  { return }
+        
+        if annotation.infoWindowConsumesTapEvents {
+            view.addGestureRecognizer(self.onCalloutTapGestureRecognizer!)
+        }
+        self.currentlySelectedAnnotation = annotation.id
+        self.annotationController.onAnnotationClick(annotation: annotation)
+    }
+    
+    public func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+        self.currentlySelectedAnnotation = nil
+        view.removeGestureRecognizer(self.onCalloutTapGestureRecognizer!)
+    }
+
+    
+    public func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        guard !isClusteringEnabled else {
+            return nil
+        }
+        if annotation is MKUserLocation {
+            return nil
+        } else if let flutterAnnotation = annotation as? FlutterAnnotation {
+            return self.annotationController.getAnnotationView(annotation: flutterAnnotation)
+        }
+        return nil
+    }
+    
+    public func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if overlay is FlutterPolyline {
+            return polylineController.polylineRenderer(overlay: overlay)
+        } else if overlay is FlutterPolygon {
+            return polygonController.polygonRenderer(overlay: overlay)
+        } else if overlay is FlutterCircle {
+            return circleController.circleRenderer(overlay: overlay)
+        }
+        return MKOverlayRenderer()
+    }
+    
+    @objc func calloutTapped(_ sender: UITapGestureRecognizer? = nil) {
+        if self.currentlySelectedAnnotation != nil {
+            self.channel.invokeMethod("infoWindow#onTap", arguments: ["annotationId": self.currentlySelectedAnnotation!])
+        }
+
+
     }
     
     private func setMethodCallHandlers() {

@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+
+import 'package:apple_maps_flutter_example/map_update.dart';
+import 'package:apple_maps_flutter_example/padding.dart';
+import 'package:apple_maps_flutter_example/place_annotation.dart';
+import 'package:apple_maps_flutter_example/place_annotation_clustered.dart';
+import 'package:apple_maps_flutter_example/place_circle.dart';
+import 'package:apple_maps_flutter_example/place_polyline.dart';
+import 'package:apple_maps_flutter_example/place_polygon.dart';
+import 'package:apple_maps_flutter_example/scrolling_map.dart';
+
 import 'package:apple_maps_flutter_example/animate_camera.dart';
 import 'package:apple_maps_flutter_example/annotation_icons.dart';
 import 'package:apple_maps_flutter_example/map_click.dart';
@@ -27,6 +37,7 @@ final List<ExamplePage> _allPages = <ExamplePage>[
   MoveCameraPage(),
   PaddingPage(),
   PlaceAnnotationPage(),
+  PlaceAnnotationClusteredPage(),
   AnnotationIconsPage(),
   PlacePolylinePage(),
   PlacePolygonPage(),

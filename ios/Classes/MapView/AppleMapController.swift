@@ -32,6 +32,7 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         mapView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         
         self.initialCameraPosition = args["initialCameraPosition"]! as! Dictionary<String, Any>
+        self.mapView.animationDuration = 0.1 // Set the animation duration to 0.5 seconds
         
         super.init()
         

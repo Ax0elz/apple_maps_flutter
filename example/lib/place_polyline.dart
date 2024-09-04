@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
+
 import 'package:apple_maps_flutter/apple_maps_flutter.dart';
+import 'package:flutter/material.dart';
 
 import 'page.dart';
 
@@ -12,7 +14,9 @@ class PlacePolylinePage extends ExamplePage {
 
   @override
   Widget build(BuildContext context) {
-    return const PlacePolylineBody();
+    return SafeArea(
+      child: const PlacePolylineBody(),
+    );
   }
 }
 
@@ -26,10 +30,11 @@ class PlacePolylineBody extends StatefulWidget {
 class PlacePolylineBodyState extends State<PlacePolylineBody> {
   PlacePolylineBodyState();
 
-  AppleMapController controller;
+  late AppleMapController controller;
   Map<PolylineId, Polyline> polylines = <PolylineId, Polyline>{};
   int _polylineIdCounter = 1;
-  PolylineId selectedPolyline;
+  Uint8List? _imageBytes;
+  PolylineId? selectedPolyline;
 
   // Values when toggling polyline color
   int colorsIndex = 0;
@@ -115,64 +120,64 @@ class PlacePolylineBodyState extends State<PlacePolylineBody> {
   }
 
   void _toggleVisible() {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         visibleParam: !polyline.visible,
       );
     });
   }
 
   Future<void> _changeZIndex() async {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     final int current = polyline.zIndex ?? 0;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         zIndexParam: current == 12 ? 0 : current + 1,
       );
     });
   }
 
   void _changeColor() {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         colorParam: colors[++colorsIndex % colors.length],
       );
     });
   }
 
   void _changeWidth() {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         widthParam: widths[++widthsIndex % widths.length],
       );
     });
   }
 
   void _changeJointType() {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         jointTypeParam: jointTypes[++jointTypesIndex % jointTypes.length],
       );
     });
   }
 
   void _changeCaps() {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         polylineCapParam: lineCaps[++lineCapsIndex % lineCaps.length],
       );
     });
   }
 
   void _changePattern() {
-    final Polyline polyline = polylines[selectedPolyline];
+    final Polyline polyline = polylines[selectedPolyline]!;
     setState(() {
-      polylines[selectedPolyline] = polyline.copyWith(
+      polylines[selectedPolyline!] = polyline.copyWith(
         patternsParam: patterns[++patternsIndex % patterns.length],
       );
     });
@@ -181,88 +186,66 @@ class PlacePolylineBodyState extends State<PlacePolylineBody> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Center(
-          child: SizedBox(
-            width: 350.0,
-            height: 300.0,
-            child: AppleMap(
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(52.4478, -3.5402),
-                zoom: 7.0,
-              ),
-              polylines: Set<Polyline>.of(polylines.values),
-              onMapCreated: _onMapCreated,
+        Expanded(
+          child: AppleMap(
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(52.4478, -3.5402),
+              zoom: 7.0,
             ),
+            polylines: Set<Polyline>.of(polylines.values),
+            onMapCreated: _onMapCreated,
           ),
         ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Column(
-                      children: <Widget>[
-                        FlatButton(
-                          child: const Text('add'),
-                          onPressed: _add,
-                        ),
-                        FlatButton(
-                          child: const Text('remove'),
-                          onPressed:
-                              (selectedPolyline == null) ? null : _remove,
-                        ),
-                        FlatButton(
-                          child: const Text('toggle visible'),
-                          onPressed: (selectedPolyline == null)
-                              ? null
-                              : _toggleVisible,
-                        ),
-                        FlatButton(
-                          child: const Text('change zIndex'),
-                          onPressed: _changeZIndex,
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: <Widget>[
-                        FlatButton(
-                          child: const Text('change width'),
-                          onPressed:
-                              (selectedPolyline == null) ? null : _changeWidth,
-                        ),
-                        FlatButton(
-                          child: const Text('change color'),
-                          onPressed:
-                              (selectedPolyline == null) ? null : _changeColor,
-                        ),
-                        FlatButton(
-                          child: const Text('change polyline caps'),
-                          onPressed:
-                              (selectedPolyline == null) ? null : _changeCaps,
-                        ),
-                        FlatButton(
-                          child: const Text('change joint type'),
-                          onPressed: (selectedPolyline == null)
-                              ? null
-                              : _changeJointType,
-                        ),
-                        FlatButton(
-                          child: const Text('change pattern'),
-                          onPressed: (selectedPolyline == null)
-                              ? null
-                              : _changePattern,
-                        ),
-                      ],
-                    )
-                  ],
-                )
-              ],
-            ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            children: [
+              TextButton(child: const Text('add'), onPressed: _add),
+              TextButton(
+                  child: const Text('remove'),
+                  onPressed: (selectedPolyline == null) ? null : _remove),
+              TextButton(
+                  child: const Text('toggle visible'),
+                  onPressed:
+                      (selectedPolyline == null) ? null : _toggleVisible),
+              TextButton(
+                  child: const Text('change zIndex'), onPressed: _changeZIndex),
+              TextButton(
+                  child: const Text('change width'),
+                  onPressed: (selectedPolyline == null) ? null : _changeWidth),
+              TextButton(
+                  child: const Text('change color'),
+                  onPressed: (selectedPolyline == null) ? null : _changeColor),
+              TextButton(
+                  child: const Text('change polyline caps'),
+                  onPressed: (selectedPolyline == null) ? null : _changeCaps),
+              TextButton(
+                  child: const Text('change joint type'),
+                  onPressed:
+                      (selectedPolyline == null) ? null : _changeJointType),
+              TextButton(
+                  child: const Text('change pattern'),
+                  onPressed:
+                      (selectedPolyline == null) ? null : _changePattern),
+              TextButton(
+                child: Text('Take a snapshot'),
+                onPressed: () async {
+                  final imageBytes = await this
+                      .controller
+                      .takeSnapshot(SnapshotOptions(showOverlays: true));
+                  setState(() {
+                    _imageBytes = imageBytes;
+                  });
+                },
+              ),
+              Container(
+                decoration: BoxDecoration(color: Colors.blueGrey[50]),
+                height: 180,
+                child: _imageBytes != null ? Image.memory(_imageBytes!) : null,
+              ),
+            ],
           ),
         ),
       ],

@@ -1,3 +1,59 @@
+# Changelog
+## 1.2.1
+* Fix Fatal error: Attempted to read an unowned reference but the object was already deallocated
+
+## 1.4.0
+
+* Migrates from `ui.hash*` to `Object.hash*`
+
+## 1.3.0
+
+* Animate marker position changes instead of removing and re-adding
+* Fix Fatal error: Attempted to read an unowned reference but the object was already deallocated
+* Fixed an issue where onCameraMove was not invoked by double-tapping
+* Added insetsLayoutMarginsFromSafeArea
+
+## 1.2.0
+
+* Added a `markerAnnotationWithHue()` and `pinAnnotationWithHue()` method to allow custom marker/pin colors
+
+## 1.1.0
+
+* Added Annotation zIndex
+* Added posibility to take snapshots of the map
+
+## 1.0.3
+
+* Fixes an issue where mapController.moveCamera would animate the camera transition
+* To animate a camera movement, mapController.animateCamera should be used instead
+
+## 1.0.2
+
+* Removed Android folder to fix build failures
+
+## 1.0.1
+
+* Fixes memory leak
+* Adds ability to take snapshots of the map
+## 1.0.0
+
+Thanks to @jonbhanson
+* Adds null safety.
+* Refreshes the example app.
+* Updates .gitignore and removes files that should not be tracked.
+
+## 0.1.4
+
+* Animate to bounds was added. (Thanks to @nghiashiyi)
+* Fixed an issue where the user location was only displayed in `authorizationInUse` status. (Thanks to @zgosalvez)
+
+* minor fixes
+
+## 0.1.3
+
+* Thanks to @maxiundtesa the getter for the current zoomLevel was added
+* iOS build failure for Flutter modules was fixed
+
 ## 0.1.2+5
 
 * Fixed build failure

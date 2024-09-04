@@ -16,8 +16,8 @@ typedef void CameraPositionCallback(CameraPosition position);
 
 class AppleMap extends StatefulWidget {
   const AppleMap({
-    Key key,
-    @required this.initialCameraPosition,
+    Key? key,
+    required this.initialCameraPosition,
     this.onMapCreated,
     this.gestureRecognizers,
     this.compassEnabled = true,
@@ -41,11 +41,14 @@ class AppleMap extends StatefulWidget {
     this.onCameraIdle,
     this.onTap,
     this.onLongPress,
+
     this.enableClustering = false,
-  })  : assert(initialCameraPosition != null),
+        this.snapshotOptions,
+    this.insetsLayoutMarginsFromSafeArea = true,
+  })  : 
         super(key: key);
 
-  final MapCreatedCallback onMapCreated;
+  final MapCreatedCallback? onMapCreated;
 
   /// The initial position of the map's camera.
   final CameraPosition initialCameraPosition;
@@ -80,16 +83,16 @@ class AppleMap extends StatefulWidget {
   final bool pitchGesturesEnabled;
 
   /// Annotations to be placed on the map.
-  final Set<Annotation> annotations;
+  final Set<Annotation>? annotations;
 
   /// Polylines to be placed on the map.
-  final Set<Polyline> polylines;
+  final Set<Polyline>? polylines;
 
   /// Circles to be placed on the map.
-  final Set<Circle> circles;
+  final Set<Circle>? circles;
 
   /// Polygons to be placed on the map.
-  final Set<Polygon> polygons;
+  final Set<Polygon>? polygons;
 
   /// Called when the camera starts moving.
   ///
@@ -99,24 +102,24 @@ class AppleMap extends StatefulWidget {
   /// 2. Programmatically initiated animation.
   /// 3. Camera motion initiated in response to user gestures on the map.
   ///    For example: pan, tilt, pinch to zoom, or rotate.
-  final VoidCallback onCameraMoveStarted;
+  final VoidCallback? onCameraMoveStarted;
 
   /// Called repeatedly as the camera continues to move after an
   /// onCameraMoveStarted call.
   ///
   /// This may be called as often as once every frame and should
   /// not perform expensive operations.
-  final CameraPositionCallback onCameraMove;
+  final CameraPositionCallback? onCameraMove;
 
   /// Called when camera movement has ended, there are no pending
   /// animations and the user has stopped interacting with the map.
-  final VoidCallback onCameraIdle;
+  final VoidCallback? onCameraIdle;
 
   /// Called every time a [AppleMap] is tapped.
-  final ArgumentCallback<LatLng> onTap;
+  final ArgumentCallback<LatLng>? onTap;
 
   /// Called every time a [AppleMap] is long pressed.
-  final ArgumentCallback<LatLng> onLongPress;
+  final ArgumentCallback<LatLng>? onLongPress;
 
   /// True if a "My Location" layer should be shown on the map.
   ///
@@ -156,7 +159,7 @@ class AppleMap extends StatefulWidget {
   ///
   /// When this set is empty or null, the map will only handle pointer events for gestures that
   /// were not claimed by any other gesture recognizer.
-  final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers;
+  final Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers;
 
   /// The padding used on the map
   ///
@@ -164,10 +167,18 @@ class AppleMap extends StatefulWidget {
   /// native controls.
   final EdgeInsets padding;
 
+
   /// Enables or disables MapKit native clustering.
   ///
   /// Warning: Experimental. This feature has only been tested with custom icon annotations.
   final bool enableClustering;
+
+  final SnapshotOptions? snapshotOptions;
+
+  /// A Boolean value indicating whether the view's layout margins are updated
+  /// automatically to reflect the safe area.
+  final bool insetsLayoutMarginsFromSafeArea;
+
 
   @override
   State createState() => _AppleMapState();
@@ -181,12 +192,12 @@ class _AppleMapState extends State<AppleMap> {
   Map<PolylineId, Polyline> _polylines = <PolylineId, Polyline>{};
   Map<PolygonId, Polygon> _polygons = <PolygonId, Polygon>{};
   Map<CircleId, Circle> _circles = <CircleId, Circle>{};
-  _AppleMapOptions _appleMapOptions;
+  late _AppleMapOptions _appleMapOptions;
 
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> creationParams = <String, dynamic>{
-      'initialCameraPosition': widget.initialCameraPosition?._toMap(),
+      'initialCameraPosition': widget.initialCameraPosition._toMap(),
       'options': _appleMapOptions.toMap(),
       'annotationsToAdd': _serializeAnnotationSet(widget.annotations),
       'polylinesToAdd': _serializePolylineSet(widget.polylines),
@@ -244,9 +255,6 @@ class _AppleMapState extends State<AppleMap> {
     controller._updateAnnotations(_AnnotationUpdates.from(
         _annotations.values.toSet(), widget.annotations));
     _annotations = _keyByAnnotationId(widget.annotations);
-    _annotations.forEach((key, value) {
-      print('Id: ${key.value} icon = ${value.icon._toJson()}');
-    });
   }
 
   void _updatePolylines() async {
@@ -279,67 +287,50 @@ class _AppleMapState extends State<AppleMap> {
       this,
     );
     _controller.complete(controller);
-    if (widget.onMapCreated != null) {
-      widget.onMapCreated(controller);
-    }
+    widget.onMapCreated?.call(controller);
   }
 
   void onAnnotationTap(String annotationIdParam) {
-    assert(annotationIdParam != null);
     final AnnotationId annotationId = AnnotationId(annotationIdParam);
-    if (_annotations[annotationId]?.onTap != null) {
-      _annotations[annotationId].onTap();
-    }
+    _annotations[annotationId]?.onTap?.call();
   }
 
   void onAnnotationDragEnd(String annotationIdParam, LatLng position) {
-    assert(annotationIdParam != null);
     final AnnotationId annotationId = AnnotationId(annotationIdParam);
-    if (_annotations[annotationId]?.onDragEnd != null) {
-      _annotations[annotationId].onDragEnd(position);
-    }
+    _annotations[annotationId]?.onDragEnd?.call(position);
   }
 
   void onPolylineTap(String polylineIdParam) {
-    assert(polylineIdParam != null);
     final PolylineId polylineId = PolylineId(polylineIdParam);
-    if (_polylines[polylineId]?.onTap != null) {
-      _polylines[polylineId].onTap();
-    }
+    _polylines[polylineId]?.onTap?.call();
   }
 
   void onPolygonTap(String polygonIdParam) {
-    assert(polygonIdParam != null);
     final PolygonId polygonId = PolygonId(polygonIdParam);
-    _polygons[polygonId].onTap();
+    _polygons[polygonId]?.onTap?.call();
   }
 
   void onCircleTap(String circleIdParam) {
-    assert(circleIdParam != null);
     final CircleId circleId = CircleId(circleIdParam);
-    _circles[circleId].onTap();
+    _circles[circleId]?.onTap?.call();
   }
 
   void onInfoWindowTap(String annotationIdParam) {
-    assert(annotationIdParam != null);
     final AnnotationId annotationId = AnnotationId(annotationIdParam);
-    if (_annotations[annotationId]?.infoWindow?.onTap != null) {
-      _annotations[annotationId].infoWindow.onTap();
-    }
+    _annotations[annotationId]?.infoWindow.onTap?.call();
+  }
+
+  void onAnnotationZIndexChanged(String annotationIdParam, double zIndex) {
+    final AnnotationId annotationId = AnnotationId(annotationIdParam);
+    _annotations[annotationId]?.zIndex = zIndex;
   }
 
   void onTap(LatLng position) {
-    assert(position != null);
-    if (widget.onTap != null) {
-      widget.onTap(position);
-    }
+    widget.onTap?.call(position);
   }
 
   void onLongPress(LatLng position) {
-    assert(position != null);
-    if (widget.onLongPress != null) {
-      widget.onLongPress(position);
-    }
+    widget.onLongPress?.call(position);
   }
 }
 
@@ -361,6 +352,7 @@ class _AppleMapOptions {
     this.myLocationEnabled,
     this.myLocationButtonEnabled,
     this.padding,
+    this.insetsLayoutMarginsFromSafeArea,
   });
 
   static _AppleMapOptions fromWidget(AppleMap map) {
@@ -377,32 +369,35 @@ class _AppleMapOptions {
       myLocationEnabled: map.myLocationEnabled,
       myLocationButtonEnabled: map.myLocationButtonEnabled,
       padding: map.padding,
+      insetsLayoutMarginsFromSafeArea: map.insetsLayoutMarginsFromSafeArea,
     );
   }
 
-  final bool compassEnabled;
+  final bool? compassEnabled;
 
-  final bool trafficEnabled;
+  final bool? trafficEnabled;
 
-  final MapType mapType;
+  final MapType? mapType;
 
-  final MinMaxZoomPreference minMaxZoomPreference;
+  final MinMaxZoomPreference? minMaxZoomPreference;
 
-  final bool rotateGesturesEnabled;
+  final bool? rotateGesturesEnabled;
 
-  final bool scrollGesturesEnabled;
+  final bool? scrollGesturesEnabled;
 
-  final bool pitchGesturesEnabled;
+  final bool? pitchGesturesEnabled;
 
-  final TrackingMode trackingMode;
+  final TrackingMode? trackingMode;
 
-  final bool zoomGesturesEnabled;
+  final bool? zoomGesturesEnabled;
 
-  final bool myLocationEnabled;
+  final bool? myLocationEnabled;
 
-  final bool myLocationButtonEnabled;
+  final bool? myLocationButtonEnabled;
 
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
+
+  final bool? insetsLayoutMarginsFromSafeArea;
 
   Map<String, dynamic> toMap() {
     final Map<String, dynamic> optionsMap = <String, dynamic>{};
@@ -425,6 +420,8 @@ class _AppleMapOptions {
     addIfNonNull('myLocationEnabled', myLocationEnabled);
     addIfNonNull('myLocationButtonEnabled', myLocationButtonEnabled);
     addIfNonNull('padding', _serializePadding(padding));
+    addIfNonNull(
+        'insetsLayoutMarginsFromSafeArea', insetsLayoutMarginsFromSafeArea);
     return optionsMap;
   }
 
@@ -436,7 +433,7 @@ class _AppleMapOptions {
           (String key, dynamic value) => prevOptionsMap[key] == value);
   }
 
-  List<double> _serializePadding(EdgeInsets insets) {
+  List<double>? _serializePadding(EdgeInsets? insets) {
     if (insets == null) return null;
 
     return [insets.top, insets.left, insets.bottom, insets.right];

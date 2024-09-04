@@ -15,12 +15,13 @@ enum BUTTON_IDS: Int {
 
 
 class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
+    weak var mapContainerView: UIView?
+    weak var channel: FlutterMethodChannel?
     var oldBounds: CGRect?
-    var mapContainerView: UIView?
-    var channel: FlutterMethodChannel?
     var options: Dictionary<String, Any>?
     var isMyLocationButtonShowing: Bool? = false
-    fileprivate let locationManager:CLLocationManager = CLLocationManager()
+    
+    fileprivate let locationManager: CLLocationManager = CLLocationManager()
     
     let mapTypes: Array<MKMapType> = [
         MKMapType.standard,
@@ -193,21 +194,39 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
                 self.maxZoomLevel = _maxZoom
             }
         }
+        
+        if let insetsSafeArea: Bool = options["insetsLayoutMarginsFromSafeArea"] as? Bool {
+            if #available(iOS 11.0, *) {
+                self.insetsLayoutMarginsFromSafeArea = insetsSafeArea
+            }
+        }
+
     }
     
-    public func setUserLocation() {
-        if CLLocationManager.authorizationStatus() == .notDetermined {
+    func setUserLocation() {
+        let authorizationStatus = CLLocationManager.authorizationStatus()
+        
+        switch authorizationStatus {
+        case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
-        } else if CLLocationManager.authorizationStatus() ==  .authorizedWhenInUse {
+            break
+            
+        case .authorizedAlways:
+            fallthrough
+        case .authorizedWhenInUse:
             locationManager.requestWhenInUseAuthorization()
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.distanceFilter = kCLDistanceFilterNone
             locationManager.startUpdatingLocation()
             self.showsUserLocation = true
+            break
+            
+        default:
+            print("\(authorizationStatus.rawValue) is not supported.")
         }
     }
     
-    public func removeUserLocation() {
+    func removeUserLocation() {
         locationManager.stopUpdatingLocation()
         self.showsUserLocation = false
     }
@@ -253,6 +272,12 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     
     @objc func centerMapOnUserButtonClicked() {
        self.setUserTrackingMode(MKUserTrackingMode.follow, animated: true)
+    }
+    
+    func getMapViewAnnotations() -> [FlutterAnnotation?] {
+        let flutterAnnotations = self.annotations as? [FlutterAnnotation] ?? []
+        let sortedAnnotations = flutterAnnotations.sorted(by: { $0.zIndex  < $1.zIndex })
+        return sortedAnnotations
     }
        
     
@@ -307,19 +332,17 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         }
     }
     
-    public func updateCameraValues() {
+    func updateCameraValues() {
         if oldBounds != nil && oldBounds != CGRect.zero {
             self.updateStoredCameraValues(newZoomLevel: calculatedZoomLevel, newPitch: camera.pitch, newHeading: actualHeading)
         }
     }
     
     // Always allow multiple gestureRecognizers
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
-    
-    
     
     func distanceOfCGPoints(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
         let xDist = a.x - b.x

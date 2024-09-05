@@ -206,7 +206,7 @@ extension AppleMapController: AnnotationDelegate {
 
     private func updateAnnotation(annotation: FlutterAnnotation) {
         if let oldAnnotation = self.getAnnotation(with: annotation.id) {
-            UIView.animate(withDuration: 0.32, animations: {
+            UIView.animate(withDuration: 0.1, animations: {
                 oldAnnotation.coordinate = annotation.coordinate
                 oldAnnotation.zIndex = annotation.zIndex
                 oldAnnotation.anchor = annotation.anchor

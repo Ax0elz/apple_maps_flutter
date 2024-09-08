@@ -62,52 +62,52 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     
     private func setMethodCallHandlers() {
         channel.setMethodCallHandler({ [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
-            guard let self = self else {
+            guard let strongSelf = self else {
                 return
             }
             if let args: Dictionary<String, Any> = call.arguments as? Dictionary<String,Any> {
                 switch(call.method) {
                 case "annotations#update":
-                    self.annotationUpdate(args: args)
+                    strongSelf.annotationUpdate(args: args)
                     result(nil)
                     break
                 case "annotations#showInfoWindow":
-                    self.selectAnnotation(with: args["annotationId"] as! String)
+                    strongSelf.selectAnnotation(with: args["annotationId"] as! String)
                     break
                 case "annotations#hideInfoWindow":
-                    self.hideAnnotation(with: args["annotationId"] as! String)
+                    strongSelf.hideAnnotation(with: args["annotationId"] as! String)
                     break
                 case "annotations#isInfoWindowShown":
-                    result(self.isAnnotationSelected(with: args["annotationId"] as! String))
+                    result(strongSelf.isAnnotationSelected(with: args["annotationId"] as! String))
                     break
                 case "polylines#update":
-                    self.polylineUpdate(args: args)
+                    strongSelf.polylineUpdate(args: args)
                     result(nil)
                     break
                 case "polygons#update":
-                    self.polygonUpdate(args: args)
+                    strongSelf.polygonUpdate(args: args)
                     result(nil)
                     break
                 case "circles#update":
-                    self.circleUpdate(args: args)
+                    strongSelf.circleUpdate(args: args)
                     result(nil)
                     break
                 case "map#update":
-                    self.mapView.interpretOptions(options: args["options"] as! Dictionary<String, Any>)
+                    strongSelf.mapView.interpretOptions(options: args["options"] as! Dictionary<String, Any>)
                     break
                 case "camera#animate":
-                    self.animateCamera(args: args)
+                    strongSelf.animateCamera(args: args)
                     result(nil)
                     break
                 case "camera#move":
-                    self.moveCamera(args: args)
+                    strongSelf.moveCamera(args: args)
                     result(nil)
                     break
                 case "camera#convert":
-                    self.cameraConvert(args: args, result: result)
+                    strongSelf.cameraConvert(args: args, result: result)
                     break
                 case "map#takeSnapshot":
-                    self.takeSnapshot(options: SnapshotOptions.init(options: args), onCompletion: { (snapshot: FlutterStandardTypedData?, error: Error?) -> Void in
+                    strongSelf.takeSnapshot(options: SnapshotOptions.init(options: args), onCompletion: { (snapshot: FlutterStandardTypedData?, error: Error?) -> Void in
                         result(snapshot ?? error)
                     })
                 default:
@@ -117,35 +117,35 @@ public class AppleMapController: NSObject, FlutterPlatformView {
             } else {
                 switch call.method {
                 case "map#getVisibleRegion":
-                    result(self.mapView.getVisibleRegion())
+                    result(strongSelf.mapView.getVisibleRegion())
                     break
                 case "map#isCompassEnabled":
                     if #available(iOS 9.0, *) {
-                        result(self.mapView.showsCompass)
+                        result(strongSelf.mapView.showsCompass)
                     } else {
                         result(false)
                     }
                     break
                 case "map#isPitchGesturesEnabled":
-                    result(self.mapView.isPitchEnabled)
+                    result(strongSelf.mapView.isPitchEnabled)
                     break
                 case "map#isScrollGesturesEnabled":
-                    result(self.mapView.isScrollEnabled)
+                    result(strongSelf.mapView.isScrollEnabled)
                     break
                 case "map#isZoomGesturesEnabled":
-                    result(self.mapView.isZoomEnabled)
+                    result(strongSelf.mapView.isZoomEnabled)
                     break
                 case "map#isRotateGesturesEnabled":
-                    result(self.mapView.isRotateEnabled)
+                    result(strongSelf.mapView.isRotateEnabled)
                     break
                 case "map#isMyLocationButtonEnabled":
-                    result(self.mapView.isMyLocationButtonShowing ?? false)
+                    result(strongSelf.mapView.isMyLocationButtonShowing ?? false)
                     break
                 case "map#getMinMaxZoomLevels":
-                    result([self.mapView.minZoomLevel, self.mapView.maxZoomLevel])
+                    result([strongSelf.mapView.minZoomLevel, strongSelf.mapView.maxZoomLevel])
                     break
                 case "camera#getZoomLevel":
-                    result(self.mapView.calculatedZoomLevel)
+                    result(strongSelf.mapView.calculatedZoomLevel)
                     break
                 default:
                     result(FlutterMethodNotImplemented)

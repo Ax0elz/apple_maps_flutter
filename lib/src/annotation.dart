@@ -155,6 +155,7 @@ class Annotation {
     this.visible = true,
     this.zIndex = -1,
     this.onDragEnd,
+    this.pointOfInterestCategory,
   }) : assert(0.0 <= alpha && alpha <= 1.0);
 
   /// Uniquely identifies a [Annotation].
@@ -200,6 +201,9 @@ class Annotation {
   /// Overlays are drawn in order of z-index, so that lower values means drawn
   /// earlier, and thus appearing to be closer to the surface of the Earth.
   double zIndex;
+
+  /// The point of interest category of the annotation.
+  final PointOfInterestCategory? pointOfInterestCategory;
 
   /// Creates a new [Annotation] object whose values are the same as this instance,
   /// unless overwritten by the specified parameters.
@@ -297,4 +301,47 @@ List<Map<String, dynamic>>? _serializeAnnotationSet(
   return annotations
       .map<Map<String, dynamic>>((Annotation m) => m._toJson())
       .toList();
+}
+
+enum PointOfInterestCategory {
+  airport,
+  amusementPark,
+  aquarium,
+  atm,
+  bakery,
+  bank,
+  beach,
+  brewery,
+  cafe,
+  campground,
+  carRental,
+  evCharger,
+  fireStation,
+  fitnessCenter,
+  foodMarket,
+  gasStation,
+  hospital,
+  hotel,
+  laundry,
+  library,
+  marina,
+  movieTheater,
+  museum,
+  nationalPark,
+  nightlife,
+  park,
+  parking,
+  pharmacy,
+  police,
+  postOffice,
+  publicTransport,
+  restaurant,
+  restroom,
+  school,
+  stadium,
+  store,
+  theater,
+  university,
+  winery,
+  zoo
 }

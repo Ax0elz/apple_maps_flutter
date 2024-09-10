@@ -25,6 +25,10 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     var icon: AnnotationIcon = AnnotationIcon.init()
     var selectedProgrammatically: Bool = false
     
+    // New properties for place markers
+    var pointOfInterestCategory: MKPointOfInterestCategory?
+    var mapFeatureType: MKMapFeatureType?
+    
     public init(fromDictionary annotationData: Dictionary<String, Any>, registrar: FlutterPluginRegistrar) {
         let position: Array<Double> = annotationData["position"] as! Array<Double>
         let infoWindow: Dictionary<String, Any> = annotationData["infoWindow"] as! Dictionary<String, Any>
@@ -56,8 +60,17 @@ class FlutterAnnotation: NSObject, MKAnnotation {
         if let calloutOffsetJSON = infoWindow["anchor"] as? Array<Double> {
             self.calloutOffset = Offset(from: calloutOffsetJSON)
         }
+        
+        if let poiCategoryString = annotationData["pointOfInterestCategory"] as? String {
+            self.pointOfInterestCategory = FlutterAnnotation.mapToMKPointOfInterestCategory(poiCategoryString)
+        } else {
+            self.pointOfInterestCategory = nil
+        }
+        
+        if let featureType = annotationData["mapFeatureType"] as? String {
+            self.mapFeatureType = MKMapFeatureType(rawValue: featureType)
+        }
     }
-    
     
     static private func getAnnotationIcon(iconData: Array<Any>, registrar: FlutterPluginRegistrar, annotationId: String) -> AnnotationIcon {
         let iconTypeMap: Dictionary<String, IconType> = ["fromAssetImage": .CUSTOM_FROM_ASSET, "fromBytes": .CUSTOM_FROM_BYTES, "defaultAnnotation": .PIN, "markerAnnotation": .MARKER]
@@ -84,6 +97,52 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     
     static func != (lhs: FlutterAnnotation, rhs: FlutterAnnotation) -> Bool {
         return !(lhs == rhs)
+    }
+    
+    private static func mapToMKPointOfInterestCategory(_ category: String) -> MKPointOfInterestCategory? {
+        switch category {
+        case "airport": return .airport
+        case "amusementPark": return .amusementPark
+        case "aquarium": return .aquarium
+        case "atm": return .atm
+        case "bakery": return .bakery
+        case "bank": return .bank
+        case "beach": return .beach
+        case "brewery": return .brewery
+        case "cafe": return .cafe
+        case "campground": return .campground
+        case "carRental": return .carRental
+        case "evCharger": return .evCharger
+        case "fireStation": return .fireStation
+        case "fitnessCenter": return .fitnessCenter
+        case "foodMarket": return .foodMarket
+        case "gasStation": return .gasStation
+        case "hospital": return .hospital
+        case "hotel": return .hotel
+        case "laundry": return .laundry
+        case "library": return .library
+        case "marina": return .marina
+        case "movieTheater": return .movieTheater
+        case "museum": return .museum
+        case "nationalPark": return .nationalPark
+        case "nightlife": return .nightlife
+        case "park": return .park
+        case "parking": return .parking
+        case "pharmacy": return .pharmacy
+        case "police": return .police
+        case "postOffice": return .postOffice
+        case "publicTransport": return .publicTransport
+        case "restaurant": return .restaurant
+        case "restroom": return .restroom
+        case "school": return .school
+        case "stadium": return .stadium
+        case "store": return .store
+        case "theater": return .theater
+        case "university": return .university
+        case "winery": return .winery
+        case "zoo": return .zoo
+        default: return nil
+        }
     }
 }
 

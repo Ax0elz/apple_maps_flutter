@@ -32,12 +32,22 @@ extension AppleMapController: AnnotationDelegate {
     }
 
     public func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-        if annotation is MKUserLocation {
+        guard let flutterAnnotation = annotation as? FlutterAnnotation else {
             return nil
-        } else if let flutterAnnotation = annotation as? FlutterAnnotation {
-            return self.getAnnotationView(annotation: flutterAnnotation)
         }
-        return nil
+        
+        if let poiCategory = flutterAnnotation.pointOfInterestCategory {
+            let annotationView = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: flutterAnnotation.id)
+            annotationView.markerTintColor = poiCategory.markerTintColor
+            annotationView.glyphImage = poiCategory.glyphImage
+            return annotationView
+        } else {
+            // Use standard pin when no category is specified
+            let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: flutterAnnotation.id)
+            annotationView.canShowCallout = true
+            annotationView.pinTintColor = .red // You can change this color if needed
+            return annotationView
+        }
     }
 
     func getAnnotationView(annotation: FlutterAnnotation) -> MKAnnotationView {

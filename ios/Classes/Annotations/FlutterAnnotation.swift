@@ -62,7 +62,7 @@ class FlutterAnnotation: NSObject, MKAnnotation {
         }
         
         if let poiCategoryString = annotationData["pointOfInterestCategory"] as? String {
-            self.pointOfInterestCategory = FlutterAnnotation.mapToMKPointOfInterestCategory(poiCategoryString)
+            self.pointOfInterestCategory = MKPointOfInterestCategory(rawValue: poiCategoryString)
         } else {
             self.pointOfInterestCategory = nil
         }

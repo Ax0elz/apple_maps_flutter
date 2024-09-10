@@ -203,7 +203,7 @@ class Annotation {
   double zIndex;
 
   /// The point of interest category of the annotation.
-  final PointOfInterestCategory? pointOfInterestCategory;
+  final String? pointOfInterestCategory;
 
   /// Creates a new [Annotation] object whose values are the same as this instance,
   /// unless overwritten by the specified parameters.
@@ -253,8 +253,7 @@ class Annotation {
     addIfPresent('visible', visible);
     addIfPresent('position', position._toJson());
     addIfPresent('zIndex', zIndex);
-    addIfPresent('pointOfInterestCategory',
-        pointOfInterestCategory?.toString().split('.').last);
+    addIfPresent('pointOfInterestCategory', pointOfInterestCategory);
     return json;
   }
 
@@ -303,47 +302,4 @@ List<Map<String, dynamic>>? _serializeAnnotationSet(
   return annotations
       .map<Map<String, dynamic>>((Annotation m) => m._toJson())
       .toList();
-}
-
-enum PointOfInterestCategory {
-  airport,
-  amusementPark,
-  aquarium,
-  atm,
-  bakery,
-  bank,
-  beach,
-  brewery,
-  cafe,
-  campground,
-  carRental,
-  evCharger,
-  fireStation,
-  fitnessCenter,
-  foodMarket,
-  gasStation,
-  hospital,
-  hotel,
-  laundry,
-  library,
-  marina,
-  movieTheater,
-  museum,
-  nationalPark,
-  nightlife,
-  park,
-  parking,
-  pharmacy,
-  police,
-  postOffice,
-  publicTransport,
-  restaurant,
-  restroom,
-  school,
-  stadium,
-  store,
-  theater,
-  university,
-  winery,
-  zoo
 }

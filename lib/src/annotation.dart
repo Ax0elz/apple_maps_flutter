@@ -253,6 +253,8 @@ class Annotation {
     addIfPresent('visible', visible);
     addIfPresent('position', position._toJson());
     addIfPresent('zIndex', zIndex);
+    addIfPresent('pointOfInterestCategory',
+        pointOfInterestCategory?.toString().split('.').last);
     return json;
   }
 

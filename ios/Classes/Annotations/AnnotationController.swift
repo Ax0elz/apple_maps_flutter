@@ -41,6 +41,10 @@ extension AppleMapController: AnnotationDelegate {
     }
 
     func getAnnotationView(annotation: FlutterAnnotation) -> MKAnnotationView {
+        if annotation.experienceType != nil {
+            return annotation.getCustomAnnotationView()
+        }
+        
         let identifier: String = annotation.id
         var annotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
         let oldflutterAnnoation = annotationView?.annotation as? FlutterAnnotation

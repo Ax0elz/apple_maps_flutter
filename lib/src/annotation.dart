@@ -155,6 +155,8 @@ class Annotation {
     this.visible = true,
     this.zIndex = -1,
     this.onDragEnd,
+    this.experienceType,
+    this.experienceIcon,
   }) : assert(0.0 <= alpha && alpha <= 1.0);
 
   /// Uniquely identifies a [Annotation].
@@ -200,6 +202,9 @@ class Annotation {
   /// Overlays are drawn in order of z-index, so that lower values means drawn
   /// earlier, and thus appearing to be closer to the surface of the Earth.
   double zIndex;
+
+  final String? experienceType;
+  final IconData? experienceIcon;
 
   /// Creates a new [Annotation] object whose values are the same as this instance,
   /// unless overwritten by the specified parameters.
@@ -249,6 +254,9 @@ class Annotation {
     addIfPresent('visible', visible);
     addIfPresent('position', position._toJson());
     addIfPresent('zIndex', zIndex);
+    addIfPresent('experienceType', experienceType?.toString().split('.').last);
+    addIfPresent('experienceIcon', experienceIcon?.codePoint);
+
     return json;
   }
 

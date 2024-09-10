@@ -24,7 +24,9 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     var calloutOffset: Offset = Offset()
     var icon: AnnotationIcon = AnnotationIcon.init()
     var selectedProgrammatically: Bool = false
-    
+    var experienceType: String?
+    var experienceIconCodePoint: Int?
+
     public init(fromDictionary annotationData: Dictionary<String, Any>, registrar: FlutterPluginRegistrar) {
         let position: Array<Double> = annotationData["position"] as! Array<Double>
         let infoWindow: Dictionary<String, Any> = annotationData["infoWindow"] as! Dictionary<String, Any>
@@ -56,8 +58,10 @@ class FlutterAnnotation: NSObject, MKAnnotation {
         if let calloutOffsetJSON = infoWindow["anchor"] as? Array<Double> {
             self.calloutOffset = Offset(from: calloutOffsetJSON)
         }
+        
+        self.experienceType = annotationData["experienceType"] as? String
+        self.experienceIconCodePoint = annotationData["experienceIcon"] as? Int
     }
-    
     
     static private func getAnnotationIcon(iconData: Array<Any>, registrar: FlutterPluginRegistrar, annotationId: String) -> AnnotationIcon {
         let iconTypeMap: Dictionary<String, IconType> = ["fromAssetImage": .CUSTOM_FROM_ASSET, "fromBytes": .CUSTOM_FROM_BYTES, "defaultAnnotation": .PIN, "markerAnnotation": .MARKER]
@@ -84,6 +88,43 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     
     static func != (lhs: FlutterAnnotation, rhs: FlutterAnnotation) -> Bool {
         return !(lhs == rhs)
+    }
+    
+    func getCustomAnnotationView() -> MKAnnotationView {
+        let annotationView = MKAnnotationView(annotation: self, reuseIdentifier: id)
+        
+        let circleView = UIView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
+        circleView.layer.cornerRadius = 20
+        circleView.clipsToBounds = true
+        
+        switch experienceType {
+        case "stays":
+            circleView.backgroundColor = .blue
+        case "food":
+            circleView.backgroundColor = .green
+        case "transportation":
+            circleView.backgroundColor = .orange
+        case "entertainment":
+            circleView.backgroundColor = .purple
+        case "shopping":
+            circleView.backgroundColor = .red
+        case "other":
+            circleView.backgroundColor = .gray
+        default:
+            circleView.backgroundColor = .black
+        }
+        
+        if let iconCodePoint = experienceIconCodePoint {
+            let iconLabel = UILabel(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
+            iconLabel.text = String(UnicodeScalar(iconCodePoint)!)
+            iconLabel.textAlignment = .center
+            iconLabel.textColor = .white
+            iconLabel.font = UIFont.systemFont(ofSize: 20)
+            circleView.addSubview(iconLabel)
+        }
+        
+        annotationView.addSubview(circleView)
+        return annotationView
     }
 }
 

@@ -262,6 +262,11 @@ extension AppleMapController: AnnotationDelegate {
         if let hueColor: Double = annotation.icon.hueColor {
             markerAnnotationView.markerTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: 1)
         }
+        if let systemImageName = annotation.icon.systemImageName {
+            let configuration = UIImage.SymbolConfiguration(pointSize: 30, weight: .regular)
+            markerAnnotationView.glyphImage = UIImage(systemName: systemImageName, withConfiguration: configuration)
+        }
+
 
         return markerAnnotationView
     }

@@ -214,6 +214,7 @@ extension AppleMapController: AnnotationDelegate {
                 oldAnnotation.isVisible = annotation.isVisible
                 oldAnnotation.title = annotation.title
                 oldAnnotation.subtitle = annotation.subtitle
+                oldAnnotation.systemImageName = annotation.systemImageName
             })
             
             // Update the annotation view with the new image
@@ -263,12 +264,9 @@ extension AppleMapController: AnnotationDelegate {
             markerAnnotationView.markerTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: 1)
         }
 
-        
-        markerAnnotationView.glyphImage = UIImage(systemName: "star.fill")
-
-
-
-
+        if let systemImageName = annotation.systemImageName {
+            markerAnnotationView.glyphImage = UIImage(systemName: systemImageName)
+        }
 
         return markerAnnotationView
     }

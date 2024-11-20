@@ -22,6 +22,7 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     var isVisible: Bool? = true
     var zIndex: Double = -1
     var calloutOffset: Offset = Offset()
+    var systemImageName: String?
     var icon: AnnotationIcon = AnnotationIcon.init()
     var selectedProgrammatically: Bool = false
     
@@ -39,6 +40,10 @@ class FlutterAnnotation: NSObject, MKAnnotation {
         self.isDraggable = annotationData["draggable"] as? Bool
         if let zIndex = annotationData["zIndex"] as? Double {
             self.zIndex = zIndex
+        }
+
+        if let systemImageName = annotationData["systemImageName"] as? String {
+            self.systemImageName = systemImageName
         }
         
         if let alpha: Double = annotationData["alpha"] as? Double {

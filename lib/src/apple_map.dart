@@ -43,6 +43,7 @@ class AppleMap extends StatefulWidget {
     this.onLongPress,
     this.snapshotOptions,
     this.insetsLayoutMarginsFromSafeArea = true,
+    this.enableClustering = false,
   }) : super(key: key);
 
   final MapCreatedCallback? onMapCreated;
@@ -170,6 +171,8 @@ class AppleMap extends StatefulWidget {
   /// automatically to reflect the safe area.
   final bool insetsLayoutMarginsFromSafeArea;
 
+  final bool enableClustering;
+
   @override
   State createState() => _AppleMapState();
 }
@@ -193,6 +196,7 @@ class _AppleMapState extends State<AppleMap> {
       'polylinesToAdd': _serializePolylineSet(widget.polylines),
       'polygonsToAdd': _serializePolygonSet(widget.polygons),
       'circlesToAdd': _serializeCircleSet(widget.circles),
+      'enableClustering': widget.enableClustering,
     };
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(

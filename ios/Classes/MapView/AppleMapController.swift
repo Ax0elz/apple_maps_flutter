@@ -18,6 +18,7 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     var currentlySelectedAnnotation: String?
     var snapShotOptions: MKMapSnapshotter.Options = MKMapSnapshotter.Options()
     var snapShot: MKMapSnapshotter?
+    var isClusteringEnabled = false 
     
     public init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withargs args: Dictionary<String, Any> ,withId id: Int64) {
         self.options = args["options"] as! [String: Any]
@@ -34,10 +35,22 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         self.initialCameraPosition = args["initialCameraPosition"]! as! Dictionary<String, Any>
  
         
-        
+         self.isClusteringEnabled = args["clusteringEnabled"] as! Bool
         super.init()
         
         self.mapView.delegate = self
+
+         if isClusteringEnabled {
+            if #available(iOS 11.0, *) {
+                mapView.register(
+                    ClusterableAnnotationView.self,
+                    forAnnotationViewWithReuseIdentifier: MKMapViewDefaultAnnotationViewReuseIdentifier)
+                mapView.register(
+                    ClusterAnnotationView.self,
+                    forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
+            }
+        }
+
         
         self.mapView.setCenterCoordinate(initialCameraPosition, animated: false)
         self.setMethodCallHandlers()
@@ -161,7 +174,7 @@ public class AppleMapController: NSObject, FlutterPlatformView {
                 self.annotationsToAdd(annotations: annotationsToAdd)
             }
         }
-        if let annotationsToChange = args["annotationsToChange"] as? NSArray {
+         if !self.isClusteringEnabled, let  annotationsToChange = args["annotationsToChange"] as? NSArray {
             if annotationsToChange.count > 0 {
                 self.annotationsToChange(annotations: annotationsToChange)
             }
@@ -308,6 +321,45 @@ extension AppleMapController: MKMapViewDelegate {
             return self.circleRenderer(overlay: overlay)
         }
         return MKOverlayRenderer()
+    }
+
+     public func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        let annotationCandidate: MKAnnotation?
+
+        if #available(iOS 11.0, *) {
+            if let cluster = view.annotation as? MKClusterAnnotation {
+                annotationCandidate = cluster.memberAnnotations.first
+            } else {
+                annotationCandidate = view.annotation
+            }
+        } else {
+            annotationCandidate = view.annotation
+        }
+
+        guard let annotation: FlutterAnnotation = annotationCandidate as? FlutterAnnotation else { return }
+
+        if annotation.infoWindowConsumesTapEvents {
+            view.addGestureRecognizer(self.onCalloutTapGestureRecognizer!)
+        }
+        self.currentlySelectedAnnotation = annotation.id
+        self.annotationController.onAnnotationClick(annotation: annotation)
+    }
+
+    public func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+        self.currentlySelectedAnnotation = nil
+        view.removeGestureRecognizer(self.onCalloutTapGestureRecognizer!)
+    }
+
+    public func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        guard !isClusteringEnabled else {
+            return nil
+        }
+        if annotation is MKUserLocation {
+            return nil
+        } else if let flutterAnnotation = annotation as? FlutterAnnotation {
+            return self.annotationController.getAnnotationView(annotation: flutterAnnotation)
+        }
+        return nil
     }
 }
 

@@ -265,7 +265,10 @@ extension AppleMapController: AnnotationDelegate {
         }
 
         if let systemImageName = annotation.systemImageName {
-            markerAnnotationView.glyphImage = UIImage(systemName: systemImageName)
+            let image = UIImage(systemName: systemImageName)
+            let padding: CGFloat = 4.0
+            let paddedImage = image?.withAlignmentRectInsets(UIEdgeInsets(top: -padding, left: -padding, bottom: -padding, right: -padding))
+            markerAnnotationView.glyphImage = paddedImage
         }
 
         return markerAnnotationView

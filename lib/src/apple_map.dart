@@ -44,7 +44,6 @@ class AppleMap extends StatefulWidget {
     this.enableClustering = false,
     this.snapshotOptions,
     this.insetsLayoutMarginsFromSafeArea = true,
-    this.enableClustering = false,
   }) : super(key: key);
 
   final MapCreatedCallback? onMapCreated;

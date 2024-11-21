@@ -18,41 +18,41 @@ protocol ZPositionableAnnotation {
 class FlutterAnnotationView: MKAnnotationView {
 
     /// Override the layer factory for this class to return a custom CALayer class
-    override class var layerClass: AnyClass {
-        return ZPositionableLayer.self
-    }
+    // override class var layerClass: AnyClass {
+    //     return ZPositionableLayer.self
+    // }
 
-    /// convenience accessor for setting zPosition
-    var stickyZPosition: CGFloat {
-        get {
-            return (self.layer as! ZPositionableLayer).stickyZPosition
-        }
-        set {
-            (self.layer as! ZPositionableLayer).stickyZPosition = newValue
-        }
-    }
+    // /// convenience accessor for setting zPosition
+    // var stickyZPosition: CGFloat {
+    //     get {
+    //         return (self.layer as! ZPositionableLayer).stickyZPosition
+    //     }
+    //     set {
+    //         (self.layer as! ZPositionableLayer).stickyZPosition = newValue
+    //     }
+    // }
 }
 
 @available(iOS 11.0, *)
 class FlutterMarkerAnnotationView: MKMarkerAnnotationView {
     /// Override the layer factory for this class to return a custom CALayer class
-    override class var layerClass: AnyClass {
-        return ZPositionableLayer.self
-    }
+    // override class var layerClass: AnyClass {
+    //     return ZPositionableLayer.self
+    // }
 }
 
-@available(iOS 11.0, *)
-extension FlutterMarkerAnnotationView: ZPositionableAnnotation {
-    /// convenience accessor for setting zPosition
-    var stickyZPosition: CGFloat {
-        get {
-            return (self.layer as! ZPositionableLayer).stickyZPosition
-        }
-        set {
-            (self.layer as! ZPositionableLayer).stickyZPosition = newValue
-        }
-    }
-}
+// @available(iOS 11.0, *)
+// extension FlutterMarkerAnnotationView: ZPositionableAnnotation {
+//     /// convenience accessor for setting zPosition
+//     // var stickyZPosition: CGFloat {
+//     //     get {
+//     //         return (self.layer as! ZPositionableLayer).stickyZPosition
+//     //     }
+//     //     set {
+//     //         (self.layer as! ZPositionableLayer).stickyZPosition = newValue
+//     //     }
+//     // }
+// }
 
 /// iOS 11 automagically manages the CALayer zPosition, which breaks manual z-ordering.
 /// This subclass just throws away any values which the OS sets for zPosition, and provides

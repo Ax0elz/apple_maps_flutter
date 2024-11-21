@@ -177,11 +177,6 @@ class AppleMap extends StatefulWidget {
   /// automatically to reflect the safe area.
   final bool insetsLayoutMarginsFromSafeArea;
 
-  /// Enables or disables MapKit native clustering.
-  ///
-  /// Warning: Experimental. This feature has only been tested with custom icon annotations.
-  final bool enableClustering;
-
   @override
   State createState() => _AppleMapState();
 }
@@ -205,7 +200,6 @@ class _AppleMapState extends State<AppleMap> {
       'polylinesToAdd': _serializePolylineSet(widget.polylines),
       'polygonsToAdd': _serializePolygonSet(widget.polygons),
       'circlesToAdd': _serializeCircleSet(widget.circles),
-      'clusteringEnabled': widget.enableClustering,
     };
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(

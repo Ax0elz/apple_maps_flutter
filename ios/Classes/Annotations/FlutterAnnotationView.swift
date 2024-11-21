@@ -8,12 +8,12 @@
 import Foundation
 import MapKit
 
-protocol ZPositionableAnnotation {
-    var stickyZPosition: CGFloat {
-        get
-        set
-    }
-}
+// protocol ZPositionableAnnotation {
+//     var stickyZPosition: CGFloat {
+//         get
+//         set
+//     }
+// }
 
 class FlutterAnnotationView: MKAnnotationView {
 
@@ -57,25 +57,25 @@ class FlutterMarkerAnnotationView: MKMarkerAnnotationView {
 /// iOS 11 automagically manages the CALayer zPosition, which breaks manual z-ordering.
 /// This subclass just throws away any values which the OS sets for zPosition, and provides
 /// a specialized accessor for setting the zPosition
-private class ZPositionableLayer: CALayer {
+// private class ZPositionableLayer: CALayer {
 
-    /// no-op accessor for setting the zPosition
-    override var zPosition: CGFloat {
-        get {
-            return super.zPosition
-        }
-        set {
-            // do nothing
-        }
-    }
+//     /// no-op accessor for setting the zPosition
+//     override var zPosition: CGFloat {
+//         get {
+//             return super.zPosition
+//         }
+//         set {
+//             // do nothing
+//         }
+//     }
 
-    /// specialized accessor for setting the zPosition
-    var stickyZPosition: CGFloat {
-        get {
-            return super.zPosition
-        }
-        set {
-            super.zPosition = newValue
-        }
-    }
-}
+//     /// specialized accessor for setting the zPosition
+//     var stickyZPosition: CGFloat {
+//         get {
+//             return super.zPosition
+//         }
+//         set {
+//             super.zPosition = newValue
+//         }
+//     }
+// }

@@ -258,7 +258,7 @@ extension AppleMapController: AnnotationDelegate {
     private func getMarkerAnnotationView(annotation: FlutterAnnotation, id: String) -> FlutterMarkerAnnotationView {
         self.mapView.register(FlutterMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: id)
         let markerAnnotationView: FlutterMarkerAnnotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as! FlutterMarkerAnnotationView
-        markerAnnotationView.stickyZPosition = annotation.zIndex
+        // markerAnnotationView.stickyZPosition = annotation.zIndex
 
         if let hueColor: Double = annotation.icon.hueColor {
             markerAnnotationView.markerTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: 1)
@@ -283,7 +283,7 @@ extension AppleMapController: AnnotationDelegate {
             annotationView = FlutterAnnotationView(annotation: annotation, reuseIdentifier: id)
         }
         annotationView.image = annotation.icon.image
-        annotationView.stickyZPosition = annotation.zIndex
+        // annotationView.stickyZPosition = annotation.zIndex
         return annotationView
     }
 

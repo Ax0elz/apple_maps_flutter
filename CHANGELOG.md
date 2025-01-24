@@ -6,6 +6,10 @@
 
 * Migrates from `ui.hash*` to `Object.hash*`
 
+## 1.4.0
+
+* Flutter 3.27.1 compatibility, replace `ui.hash*` with `Object.hash*
+
 ## 1.3.0
 
 * Animate marker position changes instead of removing and re-adding

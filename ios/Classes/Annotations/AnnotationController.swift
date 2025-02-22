@@ -34,11 +34,80 @@ extension AppleMapController: AnnotationDelegate {
     public func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         if annotation is MKUserLocation {
             return nil
-        } else if let flutterAnnotation = annotation as? FlutterAnnotation {
-            return self.getAnnotationView(annotation: flutterAnnotation)
+        } 
+        // Handle single FlutterAnnotation (no changes needed)
+        else if let flutterAnnotation = annotation as? FlutterAnnotation {
+            let view = self.getAnnotationView(annotation: flutterAnnotation)
+            if #available(iOS 11.0, *) {
+                view.clusteringIdentifier = "flutterAnnotation"
+            }
+            return view
+        } 
+        // Handle cluster annotation
+        else if #available(iOS 11.0, *), let cluster = annotation as? MKClusterAnnotation {
+            let identifier = "cluster"
+            var clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+            if clusterView == nil {
+                clusterView = MKAnnotationView(annotation: cluster, reuseIdentifier: identifier)
+                clusterView?.canShowCallout = false
+            } else {
+                clusterView?.annotation = cluster
+            }
+            
+            // Determine the most common hueColor among member annotations
+            var hueCount: [Double: Int] = [:]
+            for member in cluster.memberAnnotations {
+                if let flutterAnnotation = member as? FlutterAnnotation,
+                   (flutterAnnotation.icon.iconType == .MARKER || flutterAnnotation.icon.iconType == .PIN),
+                   let hueColor = flutterAnnotation.icon.hueColor {
+                    hueCount[hueColor, default: 0] += 1
+                }
+            }
+            
+            // Select the most common hueColor or default to blue (hue = 0.6667)
+            let mostCommonHue: Double
+            if let (hue, _) = hueCount.max(by: { $0.value < $1.value }) {
+                mostCommonHue = hue
+            } else {
+                mostCommonHue = 0.6667 // Default to blue
+            }
+            
+            // Generate the cluster image with the determined hue
+            clusterView?.image = imageForCluster(count: cluster.memberAnnotations.count, hue: mostCommonHue)
+            return clusterView
         }
         return nil
     }
+
+     private func imageForCluster(count: Int, hue: Double) -> UIImage {
+        let size = CGSize(width: 40, height: 40)
+        UIGraphicsBeginImageContextWithOptions(size, false, 0)
+        defer { UIGraphicsEndImageContext() }
+        let context = UIGraphicsGetCurrentContext()!
+        
+        // Draw a circle with the specified hue
+        let color = UIColor(hue: CGFloat(hue), saturation: 1, brightness: 1, alpha: 1)
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: CGRect(origin: .zero, size: size))
+        
+        // Draw the annotation count in white
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
+            .foregroundColor: UIColor.white
+        ]
+        let text = "\(count)"
+        let textSize = text.size(withAttributes: attributes)
+        let textRect = CGRect(
+            x: (size.width - textSize.width) / 2,
+            y: (size.height - textSize.height) / 2,
+            width: textSize.width,
+            height: textSize.height
+        )
+        text.draw(in: textRect, withAttributes: attributes)
+        
+        return UIGraphicsGetImageFromCurrentImageContext()!
+    }
+
 
     func getAnnotationView(annotation: FlutterAnnotation) -> MKAnnotationView {
         let identifier: String = annotation.id

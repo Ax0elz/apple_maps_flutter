@@ -20,6 +20,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     var oldBounds: CGRect?
     var options: Dictionary<String, Any>?
     var isMyLocationButtonShowing: Bool? = false
+    var clusteringEnabled: Bool = false
     
     fileprivate let locationManager: CLLocationManager = CLLocationManager()
     
@@ -201,6 +202,18 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             }
         }
 
+        if let clustering = options["clustering"] as? Bool {
+            self.clusteringEnabled = clustering
+            if #available(iOS 11.0, *) {
+                // Enable/disable clustering based on the option
+                if clustering {
+                    self.register(
+                        MKMarkerAnnotationView.self,
+                        forAnnotationViewWithReuseIdentifier: "flutterAnnotation"
+                    )
+                }
+            }
+        }
     }
     
     func setUserLocation() {

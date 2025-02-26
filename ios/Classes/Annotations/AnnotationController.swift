@@ -35,10 +35,10 @@ extension AppleMapController: AnnotationDelegate {
         if annotation is MKUserLocation {
             return nil
         } 
-        // Handle single FlutterAnnotation (no changes needed)
+        // Handle single FlutterAnnotation
         else if let flutterAnnotation = annotation as? FlutterAnnotation {
             let view = self.getAnnotationView(annotation: flutterAnnotation)
-            if #available(iOS 11.0, *) {
+            if #available(iOS 11.0, *), let mapView = self.mapView as? FlutterMapView, mapView.clusteringEnabled {
                 view.clusteringIdentifier = "flutterAnnotation"
             }
             return view
@@ -46,9 +46,12 @@ extension AppleMapController: AnnotationDelegate {
         // Handle cluster annotation
         else if #available(iOS 11.0, *), let cluster = annotation as? MKClusterAnnotation {
             let identifier = "cluster"
-            var clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+            var clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
             if clusterView == nil {
-                clusterView = MKAnnotationView(annotation: cluster, reuseIdentifier: identifier)
+                clusterView = MKMarkerAnnotationView(annotation: cluster, reuseIdentifier: identifier)
+                clusterView?.displayPriority = .defaultHigh
+                clusterView?.titleVisibility = .hidden
+                clusterView?.subtitleVisibility = .hidden
                 clusterView?.canShowCallout = false
             } else {
                 clusterView?.annotation = cluster
@@ -72,42 +75,13 @@ extension AppleMapController: AnnotationDelegate {
                 mostCommonHue = 0.6667 // Default to blue
             }
             
-            // Generate the cluster image with the determined hue
-            clusterView?.image = imageForCluster(count: cluster.memberAnnotations.count, hue: mostCommonHue)
+            clusterView?.markerTintColor = UIColor(hue: CGFloat(mostCommonHue), saturation: 1, brightness: 1, alpha: 1)
+            clusterView?.glyphText = "\(cluster.memberAnnotations.count)"
+            
             return clusterView
         }
         return nil
     }
-
-     private func imageForCluster(count: Int, hue: Double) -> UIImage {
-        let size = CGSize(width: 40, height: 40)
-        UIGraphicsBeginImageContextWithOptions(size, false, 0)
-        defer { UIGraphicsEndImageContext() }
-        let context = UIGraphicsGetCurrentContext()!
-        
-        // Draw a circle with the specified hue
-        let color = UIColor(hue: CGFloat(hue), saturation: 1, brightness: 1, alpha: 1)
-        context.setFillColor(color.cgColor)
-        context.fillEllipse(in: CGRect(origin: .zero, size: size))
-        
-        // Draw the annotation count in white
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
-            .foregroundColor: UIColor.white
-        ]
-        let text = "\(count)"
-        let textSize = text.size(withAttributes: attributes)
-        let textRect = CGRect(
-            x: (size.width - textSize.width) / 2,
-            y: (size.height - textSize.height) / 2,
-            width: textSize.width,
-            height: textSize.height
-        )
-        text.draw(in: textRect, withAttributes: attributes)
-        
-        return UIGraphicsGetImageFromCurrentImageContext()!
-    }
-
 
     func getAnnotationView(annotation: FlutterAnnotation) -> MKAnnotationView {
         let identifier: String = annotation.id

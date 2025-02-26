@@ -43,6 +43,7 @@ class AppleMap extends StatefulWidget {
     this.onLongPress,
     this.snapshotOptions,
     this.insetsLayoutMarginsFromSafeArea = true,
+    this.clustering = false,
   }) : super(key: key);
 
   final MapCreatedCallback? onMapCreated;
@@ -169,6 +170,9 @@ class AppleMap extends StatefulWidget {
   /// A Boolean value indicating whether the view's layout margins are updated
   /// automatically to reflect the safe area.
   final bool insetsLayoutMarginsFromSafeArea;
+
+  /// True if the map should cluster markers when zoomed out.
+  final bool clustering;
 
   @override
   State createState() => _AppleMapState();
@@ -342,6 +346,7 @@ class _AppleMapOptions {
     this.myLocationButtonEnabled,
     this.padding,
     this.insetsLayoutMarginsFromSafeArea,
+    this.clustering,
   });
 
   static _AppleMapOptions fromWidget(AppleMap map) {
@@ -359,6 +364,7 @@ class _AppleMapOptions {
       myLocationButtonEnabled: map.myLocationButtonEnabled,
       padding: map.padding,
       insetsLayoutMarginsFromSafeArea: map.insetsLayoutMarginsFromSafeArea,
+      clustering: map.clustering,
     );
   }
 
@@ -388,6 +394,8 @@ class _AppleMapOptions {
 
   final bool? insetsLayoutMarginsFromSafeArea;
 
+  final bool? clustering;
+
   Map<String, dynamic> toMap() {
     final Map<String, dynamic> optionsMap = <String, dynamic>{};
 
@@ -411,6 +419,7 @@ class _AppleMapOptions {
     addIfNonNull('padding', _serializePadding(padding));
     addIfNonNull(
         'insetsLayoutMarginsFromSafeArea', insetsLayoutMarginsFromSafeArea);
+    addIfNonNull('clustering', clustering);
     return optionsMap;
   }
 

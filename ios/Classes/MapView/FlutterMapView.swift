@@ -208,7 +208,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
                 // Enable/disable clustering based on the option
                 if clustering {
                     self.register(
-                        MKMarkerAnnotationView.self,
+                        FlutterMarkerAnnotationView.self,
                         forAnnotationViewWithReuseIdentifier: "flutterAnnotation"
                     )
                 }

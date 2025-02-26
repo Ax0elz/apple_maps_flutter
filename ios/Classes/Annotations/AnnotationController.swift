@@ -84,7 +84,7 @@ extension AppleMapController: AnnotationDelegate {
     }
 
     func getAnnotationView(annotation: FlutterAnnotation) -> MKAnnotationView {
-        let identifier: String = annotation.id
+        let identifier = "flutterAnnotation"  // Use consistent identifier for clustering
         var annotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
         let oldflutterAnnoation = annotationView?.annotation as? FlutterAnnotation
         if annotationView == nil || oldflutterAnnoation?.icon.iconType != annotation.icon.iconType {

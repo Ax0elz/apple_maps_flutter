@@ -11,6 +11,13 @@ import MapKit
 extension AppleMapController: AnnotationDelegate {
 
     public func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView)  {
+        if #available(iOS 11.0, *), let cluster = view.annotation as? MKClusterAnnotation {
+            // Handle cluster tap
+            let region = self.getRegionForCluster(cluster)
+            mapView.setRegion(region, animated: true)
+            return
+        }
+        
         if let annotation: FlutterAnnotation = view.annotation as? FlutterAnnotation  {
             self.currentlySelectedAnnotation = annotation.id
             if !annotation.selectedProgrammatically {
@@ -348,6 +355,40 @@ extension AppleMapController: AnnotationDelegate {
         channel.invokeMethod("annotation#onZIndexChanged", arguments: ["annotationId": id, "zIndex": annotation.zIndex])
         self.addAnnotation(annotation: annotation)
         self.selectAnnotation(with: id)
+    }
+
+    private func getRegionForCluster(_ cluster: MKClusterAnnotation) -> MKCoordinateRegion {
+        var minLat = Double.infinity
+        var maxLat = -Double.infinity
+        var minLng = Double.infinity
+        var maxLng = -Double.infinity
+        
+        // Find the bounding box for all annotations in the cluster
+        for annotation in cluster.memberAnnotations {
+            let coordinate = annotation.coordinate
+            minLat = min(minLat, coordinate.latitude)
+            maxLat = max(maxLat, coordinate.latitude)
+            minLng = min(minLng, coordinate.longitude)
+            maxLng = max(maxLng, coordinate.longitude)
+        }
+        
+        // Create a region that encompasses all points
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLng + maxLng) / 2
+        )
+        
+        // Add some padding to the region
+        let latDelta = (maxLat - minLat) * 1.5 // 50% padding
+        let lngDelta = (maxLng - minLng) * 1.5 // 50% padding
+        
+        return MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(
+                latitudeDelta: max(latDelta, 0.01), // Minimum zoom level
+                longitudeDelta: max(lngDelta, 0.01)
+            )
+        )
     }
 }
 

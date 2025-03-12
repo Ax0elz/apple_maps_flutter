@@ -378,15 +378,25 @@ extension AppleMapController: AnnotationDelegate {
             longitude: (minLng + maxLng) / 2
         )
         
-        // Add some padding to the region
-        let latDelta = (maxLat - minLat) * 1.5 // 50% padding
-        let lngDelta = (maxLng - minLng) * 1.5 // 50% padding
+        // Add some padding to the region - reduced from 1.5 to 1.2 for better zoom
+        let latDelta = (maxLat - minLat) * 1.2 // 20% padding
+        let lngDelta = (maxLng - minLng) * 1.2 // 20% padding
+        
+        // If the cluster has only a few annotations, zoom in more aggressively
+        let zoomFactor: Double
+        if cluster.memberAnnotations.count <= 3 {
+            zoomFactor = 0.5 // Zoom in more for small clusters
+        } else if cluster.memberAnnotations.count <= 10 {
+            zoomFactor = 0.7 // Medium zoom for medium clusters
+        } else {
+            zoomFactor = 1.0 // Standard zoom for large clusters
+        }
         
         return MKCoordinateRegion(
             center: center,
             span: MKCoordinateSpan(
-                latitudeDelta: max(latDelta, 0.01), // Minimum zoom level
-                longitudeDelta: max(lngDelta, 0.01)
+                latitudeDelta: max(latDelta * zoomFactor, 0.005), // Reduced minimum zoom level for better detail
+                longitudeDelta: max(lngDelta * zoomFactor, 0.005)
             )
         )
     }

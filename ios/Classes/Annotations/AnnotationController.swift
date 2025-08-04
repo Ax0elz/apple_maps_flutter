@@ -43,10 +43,16 @@ extension AppleMapController: AnnotationDelegate {
             return nil
         } 
         // Handle single FlutterAnnotation
-        else if let flutterAnnotation = annotation as? FlutterAnnotation {
+        else         if let flutterAnnotation = annotation as? FlutterAnnotation {
             let view = self.getAnnotationView(annotation: flutterAnnotation)
             if #available(iOS 11.0, *), let mapView = self.mapView as? FlutterMapView, mapView.clusteringEnabled {
-                view.clusteringIdentifier = "flutterAnnotation"
+                // Set clustering identifier based on zoom level
+                let currentZoom = mapView.calculatedZoomLevel
+                if currentZoom < 16.0 {
+                    view.clusteringIdentifier = "flutterAnnotation"
+                } else {
+                    view.clusteringIdentifier = "unique_\(flutterAnnotation.id)"
+                }
             }
             return view
         } 
@@ -378,34 +384,30 @@ extension AppleMapController: AnnotationDelegate {
             longitude: (minLng + maxLng) / 2
         )
         
-        // Calculate the initial span with minimal padding for tight clustering
+        // Calculate the initial span 
         let baseLat = maxLat - minLat
         let baseLng = maxLng - minLng
         
-        // Use aggressive zoom factors to ensure unclustering
+        // Use moderate zoom factors - not too aggressive
         let zoomFactor: Double
         let minZoomLevel: Double
         
-        if cluster.memberAnnotations.count <= 2 {
-            // For very small clusters, zoom in very aggressively
-            zoomFactor = 0.1
-            minZoomLevel = 0.001
-        } else if cluster.memberAnnotations.count <= 5 {
-            // For small clusters, zoom in aggressively
-            zoomFactor = 0.15
-            minZoomLevel = 0.0015
-        } else if cluster.memberAnnotations.count <= 15 {
-            // For medium clusters, moderate aggressive zoom
-            zoomFactor = 0.25
+        if cluster.memberAnnotations.count <= 3 {
+            // For small clusters, zoom in moderately
+            zoomFactor = 0.3
             minZoomLevel = 0.002
-        } else {
-            // For large clusters, still zoom in enough to start unclustering
-            zoomFactor = 0.4
+        } else if cluster.memberAnnotations.count <= 10 {
+            // For medium clusters
+            zoomFactor = 0.5
             minZoomLevel = 0.003
+        } else {
+            // For large clusters, zoom in enough to reduce cluster size
+            zoomFactor = 0.7
+            minZoomLevel = 0.005
         }
         
-        // Add minimal padding (10%) to ensure all markers are visible
-        let paddingFactor = 1.1
+        // Add padding to ensure all markers are visible
+        let paddingFactor = 1.3
         let latDelta = baseLat * paddingFactor * zoomFactor
         let lngDelta = baseLng * paddingFactor * zoomFactor
         

@@ -42,6 +42,11 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         self.mapView.setCenterCoordinate(initialCameraPosition, animated: false)
         self.setMethodCallHandlers()
         
+        // Set initial clustering state based on zoom level
+        DispatchQueue.main.async {
+            self.updateClusteringForZoomLevel()
+        }
+        
         if let annotationsToAdd: NSArray = args["annotationsToAdd"] as? NSArray {
             self.annotationsToAdd(annotations: annotationsToAdd)
         }
@@ -281,6 +286,33 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         }
         return [:]
     }
+    
+    private func updateClusteringForZoomLevel() {
+        guard let mapView = self.mapView as? FlutterMapView, mapView.clusteringEnabled else { return }
+        
+        let currentZoom = mapView.calculatedZoomLevel
+        
+        // At high zoom levels (16+), disable clustering to show individual annotations
+        // At lower zoom levels, enable clustering
+        let shouldCluster = currentZoom < 16.0
+        
+        if #available(iOS 11.0, *) {
+            // Get all FlutterAnnotations
+            let flutterAnnotations = mapView.annotations.compactMap { $0 as? FlutterAnnotation }
+            
+            for annotation in flutterAnnotations {
+                if let annotationView = mapView.view(for: annotation) {
+                    if shouldCluster {
+                        // Enable clustering by using shared identifier
+                        annotationView.clusteringIdentifier = "flutterAnnotation"
+                    } else {
+                        // Disable clustering by using unique identifier for each annotation
+                        annotationView.clusteringIdentifier = "unique_\(annotation.id)"
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -291,6 +323,10 @@ extension AppleMapController: MKMapViewDelegate {
             let locationOnMap = self.mapView.region.center
             self.channel.invokeMethod("camera#onMove", arguments: ["position": ["heading": self.mapView.actualHeading, "target":  [locationOnMap.latitude, locationOnMap.longitude], "pitch": self.mapView.camera.pitch, "zoom": self.mapView.calculatedZoomLevel]])
         }
+        
+        // Update clustering behavior based on zoom level
+        self.updateClusteringForZoomLevel()
+        
         self.channel.invokeMethod("camera#onIdle", arguments: "")
     }
     

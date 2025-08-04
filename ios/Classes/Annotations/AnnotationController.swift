@@ -43,16 +43,10 @@ extension AppleMapController: AnnotationDelegate {
             return nil
         } 
         // Handle single FlutterAnnotation
-        else         if let flutterAnnotation = annotation as? FlutterAnnotation {
+        else if let flutterAnnotation = annotation as? FlutterAnnotation {
             let view = self.getAnnotationView(annotation: flutterAnnotation)
             if #available(iOS 11.0, *), let mapView = self.mapView as? FlutterMapView, mapView.clusteringEnabled {
-                // Set clustering identifier based on zoom level
-                let currentZoom = mapView.calculatedZoomLevel
-                if currentZoom < 16.0 {
-                    view.clusteringIdentifier = "flutterAnnotation"
-                } else {
-                    view.clusteringIdentifier = "unique_\(flutterAnnotation.id)"
-                }
+                view.clusteringIdentifier = "flutterAnnotation"
             }
             return view
         } 
@@ -384,42 +378,25 @@ extension AppleMapController: AnnotationDelegate {
             longitude: (minLng + maxLng) / 2
         )
         
-        // Calculate the initial span 
-        let baseLat = maxLat - minLat
-        let baseLng = maxLng - minLng
+        // Add some padding to the region - reduced from 1.5 to 1.2 for better zoom
+        let latDelta = (maxLat - minLat) * 1.2 // 20% padding
+        let lngDelta = (maxLng - minLng) * 1.2 // 20% padding
         
-        // Use moderate zoom factors - not too aggressive
+        // If the cluster has only a few annotations, zoom in more aggressively
         let zoomFactor: Double
-        let minZoomLevel: Double
-        
         if cluster.memberAnnotations.count <= 3 {
-            // For small clusters, zoom in moderately
-            zoomFactor = 0.3
-            minZoomLevel = 0.002
+            zoomFactor = 0.5 // Zoom in more for small clusters
         } else if cluster.memberAnnotations.count <= 10 {
-            // For medium clusters
-            zoomFactor = 0.5
-            minZoomLevel = 0.003
+            zoomFactor = 0.7 // Medium zoom for medium clusters
         } else {
-            // For large clusters, zoom in enough to reduce cluster size
-            zoomFactor = 0.7
-            minZoomLevel = 0.005
+            zoomFactor = 1.0 // Standard zoom for large clusters
         }
-        
-        // Add padding to ensure all markers are visible
-        let paddingFactor = 1.3
-        let latDelta = baseLat * paddingFactor * zoomFactor
-        let lngDelta = baseLng * paddingFactor * zoomFactor
-        
-        // If markers are at exactly the same location, use minimum zoom
-        let finalLatDelta = baseLat < 0.0001 ? minZoomLevel : max(latDelta, minZoomLevel)
-        let finalLngDelta = baseLng < 0.0001 ? minZoomLevel : max(lngDelta, minZoomLevel)
         
         return MKCoordinateRegion(
             center: center,
             span: MKCoordinateSpan(
-                latitudeDelta: finalLatDelta,
-                longitudeDelta: finalLngDelta
+                latitudeDelta: max(latDelta * zoomFactor, 0.005), // Reduced minimum zoom level for better detail
+                longitudeDelta: max(lngDelta * zoomFactor, 0.005)
             )
         )
     }

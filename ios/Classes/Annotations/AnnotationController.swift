@@ -378,25 +378,46 @@ extension AppleMapController: AnnotationDelegate {
             longitude: (minLng + maxLng) / 2
         )
         
-        // Add some padding to the region - reduced from 1.5 to 1.2 for better zoom
-        let latDelta = (maxLat - minLat) * 1.2 // 20% padding
-        let lngDelta = (maxLng - minLng) * 1.2 // 20% padding
+        // Calculate the initial span with minimal padding for tight clustering
+        let baseLat = maxLat - minLat
+        let baseLng = maxLng - minLng
         
-        // If the cluster has only a few annotations, zoom in more aggressively
+        // Use aggressive zoom factors to ensure unclustering
         let zoomFactor: Double
-        if cluster.memberAnnotations.count <= 3 {
-            zoomFactor = 0.5 // Zoom in more for small clusters
-        } else if cluster.memberAnnotations.count <= 10 {
-            zoomFactor = 0.7 // Medium zoom for medium clusters
+        let minZoomLevel: Double
+        
+        if cluster.memberAnnotations.count <= 2 {
+            // For very small clusters, zoom in very aggressively
+            zoomFactor = 0.1
+            minZoomLevel = 0.001
+        } else if cluster.memberAnnotations.count <= 5 {
+            // For small clusters, zoom in aggressively
+            zoomFactor = 0.15
+            minZoomLevel = 0.0015
+        } else if cluster.memberAnnotations.count <= 15 {
+            // For medium clusters, moderate aggressive zoom
+            zoomFactor = 0.25
+            minZoomLevel = 0.002
         } else {
-            zoomFactor = 1.0 // Standard zoom for large clusters
+            // For large clusters, still zoom in enough to start unclustering
+            zoomFactor = 0.4
+            minZoomLevel = 0.003
         }
+        
+        // Add minimal padding (10%) to ensure all markers are visible
+        let paddingFactor = 1.1
+        let latDelta = baseLat * paddingFactor * zoomFactor
+        let lngDelta = baseLng * paddingFactor * zoomFactor
+        
+        // If markers are at exactly the same location, use minimum zoom
+        let finalLatDelta = baseLat < 0.0001 ? minZoomLevel : max(latDelta, minZoomLevel)
+        let finalLngDelta = baseLng < 0.0001 ? minZoomLevel : max(lngDelta, minZoomLevel)
         
         return MKCoordinateRegion(
             center: center,
             span: MKCoordinateSpan(
-                latitudeDelta: max(latDelta * zoomFactor, 0.005), // Reduced minimum zoom level for better detail
-                longitudeDelta: max(lngDelta * zoomFactor, 0.005)
+                latitudeDelta: finalLatDelta,
+                longitudeDelta: finalLngDelta
             )
         )
     }

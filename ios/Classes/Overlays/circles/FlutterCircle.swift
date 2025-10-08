@@ -19,13 +19,33 @@ class FlutterCircle: MKCircle {
     var circleRadius: Double?
     
     convenience init(fromDictionaray circleData: Dictionary<String, Any>) {
-        let _center = circleData["center"] as! NSArray
-        let centerCoordinates: CLLocationCoordinate2D = CLLocationCoordinate2D.init(latitude: _center[0] as! CLLocationDegrees, longitude: _center[1] as! CLLocationDegrees)
+        // Safely extract center coordinates
+        guard let centerArray = circleData["center"] as? NSArray,
+              centerArray.count >= 2,
+              let latitude = centerArray[0] as? CLLocationDegrees,
+              let longitude = centerArray[1] as? CLLocationDegrees,
+              latitude >= -90 && latitude <= 90,
+              longitude >= -180 && longitude <= 180 else {
+            // Initialize with default values if center is invalid
+            self.init(center: CLLocationCoordinate2D(latitude: 0, longitude: 0), radius: 10)
+            self.circleRadius = 10
+            self.id = circleData["circleId"] as? String
+            return
+        }
+
+        let centerCoordinates = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
         let radius = circleData["radius"] as? Double ?? 10
         self.init(center: centerCoordinates, radius: radius)
         self.circleRadius = radius
-        self.strokeColor = JsonConversions.convertColor(data: circleData["strokeColor"] as! NSNumber)
-        self.fillColor = JsonConversions.convertColor(data: circleData["fillColor"] as! NSNumber)
+
+        // Safely extract colors
+        if let strokeColorData = circleData["strokeColor"] as? NSNumber {
+            self.strokeColor = JsonConversions.convertColor(data: strokeColorData)
+        }
+        if let fillColorData = circleData["fillColor"] as? NSNumber {
+            self.fillColor = JsonConversions.convertColor(data: fillColorData)
+        }
+
         self.isConsumingTapEvents = circleData["consumeTapEvents"] as? Bool
         self.strokeWidth = circleData["strokeWidth"] as? CGFloat
         self.id = circleData["circleId"] as? String
@@ -34,7 +54,14 @@ class FlutterCircle: MKCircle {
     }
     
     static func == (lhs: FlutterCircle, rhs: FlutterCircle) -> Bool {
-        return lhs.strokeColor == rhs.strokeColor && lhs.fillColor == rhs.fillColor && lhs.isConsumingTapEvents == rhs.isConsumingTapEvents && lhs.strokeWidth ==  rhs.strokeWidth && lhs.isVisible == rhs.isVisible && lhs.zIndex == rhs.zIndex && lhs.coordinate.latitude == rhs.coordinate.latitude && lhs.coordinate.longitude == rhs.coordinate.longitude
+        return lhs.strokeColor == rhs.strokeColor &&
+               lhs.fillColor == rhs.fillColor &&
+               lhs.isConsumingTapEvents == rhs.isConsumingTapEvents &&
+               lhs.strokeWidth == rhs.strokeWidth &&
+               lhs.isVisible == rhs.isVisible &&
+               lhs.zIndex == rhs.zIndex &&
+               lhs.id == rhs.id &&
+               lhs.circleRadius == rhs.circleRadius
     }
     
     static func != (lhs: FlutterCircle, rhs: FlutterCircle) -> Bool {
@@ -45,25 +72,30 @@ class FlutterCircle: MKCircle {
 extension FlutterCircle: FlutterOverlay {
     func getCAShapeLayer(snapshot: MKMapSnapshotter.Snapshot) -> CAShapeLayer {
         let shapeLayer = CAShapeLayer()
-        
+
         if !(self.isVisible ?? true) {
             return shapeLayer
         }
-        
+
+        // Safely handle circle radius for overlay rendering
+        guard let circleRadius = self.circleRadius else {
+            return shapeLayer
+        }
+
         let centerPoint = snapshot.point(for: self.coordinate)
-        
-        let offsetPoint = snapshot.point(for: Utils.coordinateWithLAtitudeOffset(coordinate: self.coordinate, meters: radius))
-        
-        let radius = centerPoint.y - offsetPoint.y
-        
+
+        // Calculate the radius in screen points using the snapshot
+        let offsetPoint = snapshot.point(for: Utils.coordinateWithLatitudeOffset(coordinate: self.coordinate, meters: circleRadius))
+
+        let radius = abs(centerPoint.y - offsetPoint.y)
+
         let circlePath = UIBezierPath(arcCenter: centerPoint, radius: radius, startAngle: CGFloat(0), endAngle: CGFloat(Double.pi * 2), clockwise: true)
-        
-        // Thus we use snapshot.point() to save the pain.
+
         shapeLayer.path = circlePath.cgPath
         shapeLayer.lineWidth = self.strokeWidth ?? 0
         shapeLayer.strokeColor = self.strokeColor?.cgColor ?? UIColor.clear.cgColor
         shapeLayer.fillColor = self.fillColor?.cgColor ?? UIColor.clear.cgColor
-        
+
         return shapeLayer
     }
 }

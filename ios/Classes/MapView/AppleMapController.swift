@@ -18,20 +18,33 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     var currentlySelectedAnnotation: String?
     var snapShotOptions: MKMapSnapshotter.Options = MKMapSnapshotter.Options()
     var snapShot: MKMapSnapshotter?
+
+    deinit {
+        // Cancel any ongoing snapshot operations to prevent memory leaks
+        snapShot?.cancel()
+        snapShot = nil
+    }
     
     public init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withargs args: Dictionary<String, Any> ,withId id: Int64) {
-        self.options = args["options"] as! [String: Any]
+        guard let options = args["options"] as? [String: Any] else {
+            fatalError("AppleMapController: Missing required 'options' parameter")
+        }
+        self.options = options
+
         self.channel = FlutterMethodChannel(name: "apple_maps_plugin.luisthein.de/apple_maps_\(id)", binaryMessenger: registrar.messenger())
-        
+
         self.mapView = FlutterMapView(channel: channel, options: options)
         self.registrar = registrar
-        
+
         // To stop the odd movement of the Apple logo.
         self.contentView = UIScrollView()
         self.contentView.addSubview(mapView)
         mapView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-        
-        self.initialCameraPosition = args["initialCameraPosition"]! as! Dictionary<String, Any>
+
+        guard let initialCameraPosition = args["initialCameraPosition"] as? Dictionary<String, Any> else {
+            fatalError("AppleMapController: Missing required 'initialCameraPosition' parameter")
+        }
+        self.initialCameraPosition = initialCameraPosition
  
         
         
@@ -72,13 +85,25 @@ public class AppleMapController: NSObject, FlutterPlatformView {
                     result(nil)
                     break
                 case "annotations#showInfoWindow":
-                    strongSelf.selectAnnotation(with: args["annotationId"] as! String)
+                    guard let annotationId = args["annotationId"] as? String else {
+                        result(FlutterError(code: "INVALID_ARGUMENT", message: "annotationId is required", details: nil))
+                        return
+                    }
+                    strongSelf.selectAnnotation(with: annotationId)
                     break
                 case "annotations#hideInfoWindow":
-                    strongSelf.hideAnnotation(with: args["annotationId"] as! String)
+                    guard let annotationId = args["annotationId"] as? String else {
+                        result(FlutterError(code: "INVALID_ARGUMENT", message: "annotationId is required", details: nil))
+                        return
+                    }
+                    strongSelf.hideAnnotation(with: annotationId)
                     break
                 case "annotations#isInfoWindowShown":
-                    result(strongSelf.isAnnotationSelected(with: args["annotationId"] as! String))
+                    guard let annotationId = args["annotationId"] as? String else {
+                        result(FlutterError(code: "INVALID_ARGUMENT", message: "annotationId is required", details: nil))
+                        return
+                    }
+                    result(strongSelf.isAnnotationSelected(with: annotationId))
                     break
                 case "polylines#update":
                     strongSelf.polylineUpdate(args: args)
@@ -93,7 +118,11 @@ public class AppleMapController: NSObject, FlutterPlatformView {
                     result(nil)
                     break
                 case "map#update":
-                    strongSelf.mapView.interpretOptions(options: args["options"] as! Dictionary<String, Any>)
+                    guard let options = args["options"] as? Dictionary<String, Any> else {
+                        result(FlutterError(code: "INVALID_ARGUMENT", message: "options are required", details: nil))
+                        return
+                    }
+                    strongSelf.mapView.interpretOptions(options: options)
                     break
                 case "camera#animate":
                     strongSelf.animateCamera(args: args)
@@ -174,8 +203,8 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     private func polygonUpdate(args: Dictionary<String, Any>) -> Void {
-        if let polyligonsToAdd: NSArray = args["polygonsToAdd"] as? NSArray {
-            self.addPolygons(polygonData: polyligonsToAdd)
+        if let polygonsToAdd: NSArray = args["polygonsToAdd"] as? NSArray {
+            self.addPolygons(polygonData: polygonsToAdd)
         }
         if let polygonsToChange: NSArray = args["polygonsToChange"] as? NSArray {
             self.changePolygons(polygonData: polygonsToChange)
@@ -210,7 +239,10 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     private func moveCamera(args: Dictionary<String, Any>) -> Void {
-        let positionData: Dictionary<String, Any> = self.toPositionData(data: args["cameraUpdate"] as! Array<Any>, animated: true)
+        guard let cameraUpdate = args["cameraUpdate"] as? Array<Any> else {
+            return
+        }
+        let positionData: Dictionary<String, Any> = self.toPositionData(data: cameraUpdate, animated: true)
         if !positionData.isEmpty {
             guard let _ = positionData["moveToBounds"] else {
                 self.mapView.setCenterCoordinate(positionData, animated: false)
@@ -219,9 +251,12 @@ public class AppleMapController: NSObject, FlutterPlatformView {
             self.mapView.setBounds(positionData, animated: false)
         }
     }
-    
+
     private func animateCamera(args: Dictionary<String, Any>) -> Void {
-        let positionData: Dictionary<String, Any> = self.toPositionData(data: args["cameraUpdate"] as! Array<Any>, animated: true)
+        guard let cameraUpdate = args["cameraUpdate"] as? Array<Any> else {
+            return
+        }
+        let positionData: Dictionary<String, Any> = self.toPositionData(data: cameraUpdate, animated: true)
         if !positionData.isEmpty {
             guard let _ = positionData["moveToBounds"] else {
                 self.mapView.setCenterCoordinate(positionData, animated: true)
@@ -232,8 +267,9 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     private func cameraConvert(args: Dictionary<String, Any>, result: FlutterResult) -> Void {
-        guard let annotation = args["annotation"] as? Array<Double> else {
-            result(nil)
+        guard let annotation = args["annotation"] as? Array<Double>,
+              annotation.count >= 2 else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "annotation must contain at least 2 coordinates [latitude, longitude]", details: nil))
             return
         }
         let point = self.mapView.convert(CLLocationCoordinate2D(latitude: annotation[0] , longitude: annotation[1]), toPointTo: self.view())
@@ -242,44 +278,57 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     
     private func toPositionData(data: Array<Any>, animated: Bool) -> Dictionary<String, Any> {
         var positionData: Dictionary<String, Any> = [:]
-        if let update: String = data[0] as? String {
-            switch(update) {
-            case "newCameraPosition":
-                if let _positionData : Dictionary<String, Any> = data[1] as? Dictionary<String, Any> {
-                    positionData = _positionData
-                }
-            case "newLatLng":
-                if let _positionData : Array<Any> = data[1] as? Array<Any> {
-                    positionData = ["target": _positionData]
-                }
-            case "newLatLngZoom":
-                if let _positionData: Array<Any> = data[1] as? Array<Any> {
-                    let zoom: Double = data[2] as? Double ?? 0
-                    positionData = ["target": _positionData, "zoom": zoom]
-                }
-            case "newLatLngBounds":
-                if let _positionData: Array<Any> = data[1] as? Array<Any> {
-                    let padding: Double = data[2] as? Double ?? 0
-                    positionData = ["target": _positionData, "padding": padding, "moveToBounds": true]
-                }
-            case "zoomBy":
-                if let zoomBy: Double = data[1] as? Double {
-                    mapView.zoomBy(zoomBy: zoomBy, animated: animated)
-                }
-            case "zoomTo":
-                if let zoomTo: Double = data[1] as? Double {
-                    mapView.zoomTo(newZoomLevel: zoomTo, animated: animated)
-                }
-            case "zoomIn":
-                mapView.zoomIn(animated: animated)
-            case "zoomOut":
-                mapView.zoomOut(animated: animated)
-            default:
-                positionData = [:]
-            }
-            return positionData
+        guard let update: String = data[0] as? String else {
+            return [:]
         }
-        return [:]
+
+        switch(update) {
+        case "newCameraPosition":
+            if let _positionData : Dictionary<String, Any> = data[1] as? Dictionary<String, Any> {
+                positionData = _positionData
+            }
+            break
+        case "newLatLng":
+            if let _positionData : Array<Any> = data[1] as? Array<Any> {
+                positionData = ["target": _positionData]
+            }
+            break
+        case "newLatLngZoom":
+            if let _positionData: Array<Any> = data[1] as? Array<Any> {
+                let zoom: Double = data[2] as? Double ?? 0
+                positionData = ["target": _positionData, "zoom": zoom]
+            }
+            break
+        case "newLatLngBounds":
+            if let _positionData: Array<Any> = data[1] as? Array<Any> {
+                let padding: Double = data[2] as? Double ?? 0
+                positionData = ["target": _positionData, "padding": padding, "moveToBounds": true]
+            }
+            break
+        case "zoomBy":
+            if let zoomBy: Double = data[1] as? Double {
+                mapView.zoomBy(zoomBy: zoomBy, animated: animated)
+            }
+            // For zoom operations, return empty dict as they don't change position
+            return [:]
+        case "zoomTo":
+            if let zoomTo: Double = data[1] as? Double {
+                mapView.zoomTo(newZoomLevel: zoomTo, animated: animated)
+            }
+            // For zoom operations, return empty dict as they don't change position
+            return [:]
+        case "zoomIn":
+            mapView.zoomIn(animated: animated)
+            // For zoom operations, return empty dict as they don't change position
+            return [:]
+        case "zoomOut":
+            mapView.zoomOut(animated: animated)
+            // For zoom operations, return empty dict as they don't change position
+            return [:]
+        default:
+            positionData = [:]
+        }
+        return positionData
     }
 }
 
@@ -287,16 +336,22 @@ public class AppleMapController: NSObject, FlutterPlatformView {
 extension AppleMapController: MKMapViewDelegate {
     // onIdle
     public func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-        if ((self.mapView.mapContainerView) != nil) {
-            let locationOnMap = self.mapView.region.center
-            self.channel.invokeMethod("camera#onMove", arguments: ["position": ["heading": self.mapView.actualHeading, "target":  [locationOnMap.latitude, locationOnMap.longitude], "pitch": self.mapView.camera.pitch, "zoom": self.mapView.calculatedZoomLevel]])
+        // Ensure UI operations are performed on main thread
+        DispatchQueue.main.async {
+            if ((self.mapView.mapContainerView) != nil) {
+                let locationOnMap = self.mapView.region.center
+                self.channel.invokeMethod("camera#onMove", arguments: ["position": ["heading": self.mapView.actualHeading, "target":  [locationOnMap.latitude, locationOnMap.longitude], "pitch": self.mapView.camera.pitch, "zoom": self.mapView.calculatedZoomLevel]])
+            }
+            self.channel.invokeMethod("camera#onIdle", arguments: "")
         }
-        self.channel.invokeMethod("camera#onIdle", arguments: "")
     }
-    
+
     // onMoveStarted
     public func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
-        self.channel.invokeMethod("camera#onMoveStarted", arguments: "")
+        // Ensure UI operations are performed on main thread
+        DispatchQueue.main.async {
+            self.channel.invokeMethod("camera#onMoveStarted", arguments: "")
+        }
     }
     
     public func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -313,56 +368,70 @@ extension AppleMapController: MKMapViewDelegate {
 
 extension AppleMapController {
     private func takeSnapshot(options: SnapshotOptions, onCompletion: @escaping (FlutterStandardTypedData?, Error?) -> Void) {
+        // Cancel any existing snapshot operation to prevent memory leaks
+        snapShot?.cancel()
+        snapShot = nil
+
         // MKMapSnapShotOptions setting.
         snapShotOptions.region = self.mapView.region
         snapShotOptions.size = self.mapView.frame.size
         snapShotOptions.scale = UIScreen.main.scale
         snapShotOptions.showsBuildings = options.showBuildings
         snapShotOptions.showsPointsOfInterest = options.showPointsOfInterest
-        
+
         // Set MKMapSnapShotOptions to MKMapSnapShotter.
         snapShot = MKMapSnapshotter(options: snapShotOptions)
-        
-        snapShot?.cancel()
         
         if #available(iOS 10.0, *) {
             snapShot?.start { [weak self] snapshot, error in
                 guard let self = self else {
                     return
                 }
-                
+
                 guard let snapshot = snapshot, error == nil else {
                     onCompletion(nil, error)
                     return
                 }
-                
-                let image = UIGraphicsImageRenderer(size: self.snapShotOptions.size).image { [weak self] context in
-                    guard let self = self else {
-                        return
-                    }
-                    snapshot.image.draw(at: .zero)
-                    let rect = self.snapShotOptions.mapRect
-                    if options.showAnnotations {
-                        for annotation in self.mapView.getMapViewAnnotations() {
-                            self.drawAnnotations(annotation: annotation, point: snapshot.point(for: annotation!.coordinate))
-                        }
-                    }
-                    if options.showOverlays {
-                        for overlay in self.mapView.overlays {
-                            if ((overlay.intersects?(rect)) != nil) {
-                                self.drawOverlays(overlay: overlay, snapshot: snapshot, context: context)
-                            }
-                        }
-                    }
-                }
 
-                if let imageData = image.pngData() {
-                    onCompletion(FlutterStandardTypedData.init(bytes: imageData), nil)
+                // Ensure UI operations are performed on main thread
+                DispatchQueue.main.async {
+                    self.renderSnapshotImage(snapshot: snapshot, options: options, context: context) { image in
+                        if let imageData = image.pngData() {
+                            onCompletion(FlutterStandardTypedData.init(bytes: imageData), nil)
+                        } else {
+                            onCompletion(nil, NSError(domain: "SnapshotError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to generate snapshot image"]))
+                        }
+                    }
                 }
             }
         }
     }
-    
+
+    private func renderSnapshotImage(snapshot: MKMapSnapshotter.Snapshot, options: SnapshotOptions, context: UIGraphicsRendererContext, completion: @escaping (UIImage) -> Void) {
+        let image = UIGraphicsImageRenderer(size: self.snapShotOptions.size).image { [weak self] context in
+            guard let self = self else {
+                return
+            }
+            snapshot.image.draw(at: .zero)
+            let rect = self.snapShotOptions.mapRect
+            if options.showAnnotations {
+                for annotation in self.mapView.getMapViewAnnotations() {
+                    if let annotation = annotation {
+                        self.drawAnnotations(annotation: annotation, point: snapshot.point(for: annotation.coordinate))
+                    }
+                }
+            }
+            if options.showOverlays {
+                for overlay in self.mapView.overlays {
+                    if ((overlay.intersects?(rect)) != nil) {
+                        self.drawOverlays(overlay: overlay, snapshot: snapshot, context: context)
+                    }
+                }
+            }
+        }
+        completion(image)
+    }
+
     private func drawAnnotations(annotation: FlutterAnnotation?, point: CGPoint) {
         guard annotation != nil else {
             return

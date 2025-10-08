@@ -18,7 +18,7 @@ extension AppleMapController: PolygonDelegate {
         let polygonRenderer = MKPolygonRenderer(overlay: polygon)
 
         if let flutterPolygon: FlutterPolygon = overlay as? FlutterPolygon {
-            if flutterPolygon.isVisible! {
+            if flutterPolygon.isVisible ?? true {
                 polygonRenderer.strokeColor = flutterPolygon.strokeColor
                 polygonRenderer.fillColor = flutterPolygon.fillColor
                 polygonRenderer.lineWidth = flutterPolygon.width ?? 1.0
@@ -32,7 +32,9 @@ extension AppleMapController: PolygonDelegate {
 
     func addPolygons(polygonData data: NSArray) {
         for _polygon in data {
-            let polygonData :Dictionary<String, Any> = _polygon as! Dictionary<String, Any>
+            guard let polygonData = _polygon as? Dictionary<String, Any> else {
+                continue
+            }
             let polygon = FlutterPolygon(fromDictionaray: polygonData)
             addPolygon(polygon: polygon)
         }
@@ -41,16 +43,20 @@ extension AppleMapController: PolygonDelegate {
     func changePolygons(polygonData data: NSArray) {
         let oldOverlays: [MKOverlay] = self.mapView.overlays
         for oldOverlay in oldOverlays {
-            if oldOverlay is FlutterPolygon {
-                let oldFlutterPolygon = oldOverlay as! FlutterPolygon
-                for _polygon in data {
-                    let polygonData :Dictionary<String, Any> = _polygon as! Dictionary<String, Any>
-                    if oldFlutterPolygon.id == (polygonData["polygonId"] as! String) {
-                        let newPolygon = FlutterPolygon.init(fromDictionaray: polygonData)
-                        if oldFlutterPolygon != newPolygon {
-                            updatePolygonsOnMap(oldPolygon: oldFlutterPolygon, newPolygon: newPolygon)
-                        }
-                    }
+            guard let oldFlutterPolygon = oldOverlay as? FlutterPolygon else {
+                continue
+            }
+
+            for _polygon in data {
+                guard let polygonData = _polygon as? Dictionary<String, Any>,
+                      let polygonId = polygonData["polygonId"] as? String,
+                      oldFlutterPolygon.id == polygonId else {
+                    continue
+                }
+
+                let newPolygon = FlutterPolygon.init(fromDictionaray: polygonData)
+                if oldFlutterPolygon != newPolygon {
+                    updatePolygonsOnMap(oldPolygon: oldFlutterPolygon, newPolygon: newPolygon)
                 }
             }
         }
@@ -58,8 +64,8 @@ extension AppleMapController: PolygonDelegate {
 
     func removePolygons(polygonIds: NSArray) {
         for overlay in self.mapView.overlays {
-            if let polygon = overlay as? FlutterPolygon {
-                if polygonIds.contains(polygon.id!) {
+            if let polygon = overlay as? FlutterPolygon, let polygonId = polygon.id {
+                if polygonIds.contains(polygonId) {
                     self.mapView.removeOverlay(polygon)
                 }
             }
@@ -82,8 +88,10 @@ extension AppleMapController: PolygonDelegate {
     private func addPolygon(polygon: FlutterPolygon) {
         if polygon.zIndex == nil || polygon.zIndex == -1 {
             self.mapView.addOverlay(polygon)
+        } else if let zIndex = polygon.zIndex {
+            self.mapView.insertOverlay(polygon, at: zIndex)
         } else {
-            self.mapView.insertOverlay(polygon, at: polygon.zIndex ?? 0)
+            self.mapView.addOverlay(polygon)
         }
     }
 }

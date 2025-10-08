@@ -30,7 +30,7 @@ class  Utils {
         return (.pi / 2.0 - 2.0 * atan(exp((round(pixelY) - MapViewConstants.MERCATOR_OFFSET.rawValue) / MapViewConstants.MERCATOR_RADIUS.rawValue))) * 180.0 / .pi
     }
     
-    static func coordinateWithLAtitudeOffset(coordinate: CLLocationCoordinate2D, meters: Double) -> CLLocationCoordinate2D {
+    static func coordinateWithLatitudeOffset(coordinate: CLLocationCoordinate2D, meters: Double) -> CLLocationCoordinate2D {
 
         // number of km per degree = ~111km (111.32 in google maps, but range varies
         // between 110.567km at the equator and 111.699km at the poles)
@@ -53,7 +53,6 @@ class  Utils {
     }
     
     static func roundToTwoDecimalPlaces(number: Double) -> Double {
-        let doubleStr = String(format: "%.2f", ceil(number*100)/100)
-        return Double(doubleStr)!
+        return ceil(number * 100) / 100
     }
 }

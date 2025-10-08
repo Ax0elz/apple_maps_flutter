@@ -20,7 +20,7 @@ void main() {
   final Completer<String> allTestsCompleter = Completer<String>();
   enableFlutterDriverExtension(handler: (_) => allTestsCompleter.future);
 
-  tearDownAll(() => allTestsCompleter.complete(null));
+  tearDownAll(() => allTestsCompleter.complete(''));
 
   test('testCompassToggle', () async {
     final Key key = GlobalKey();

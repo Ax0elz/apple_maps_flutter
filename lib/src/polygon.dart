@@ -128,8 +128,8 @@ class Polygon {
 
     addIfPresent('polygonId', polygonId.value);
     addIfPresent('consumeTapEvents', consumeTapEvents);
-    addIfPresent('fillColor', fillColor.value);
-    addIfPresent('strokeColor', strokeColor.value);
+    addIfPresent('fillColor', fillColor.toARGB32());
+    addIfPresent('strokeColor', strokeColor.toARGB32());
     addIfPresent('strokeWidth', strokeWidth);
     addIfPresent('visible', visible);
     addIfPresent('zIndex', zIndex);

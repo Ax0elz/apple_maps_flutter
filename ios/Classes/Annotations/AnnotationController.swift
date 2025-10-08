@@ -12,7 +12,11 @@ extension AppleMapController: AnnotationDelegate {
 
     public func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView)  {
         if #available(iOS 11.0, *), let cluster = view.annotation as? MKClusterAnnotation {
-            // Handle cluster tap
+            // Handle cluster tap - validate cluster has members before zooming
+            guard !cluster.memberAnnotations.isEmpty else {
+                return
+            }
+
             let region = self.getRegionForCluster(cluster)
             mapView.setRegion(region, animated: true)
             return
@@ -52,6 +56,11 @@ extension AppleMapController: AnnotationDelegate {
         } 
         // Handle cluster annotation
         else if #available(iOS 11.0, *), let cluster = annotation as? MKClusterAnnotation {
+            // Validate cluster has members before creating view
+            guard !cluster.memberAnnotations.isEmpty else {
+                return nil
+            }
+
             let identifier = "cluster"
             var clusterView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
             if clusterView == nil {
@@ -66,23 +75,41 @@ extension AppleMapController: AnnotationDelegate {
             
             // Determine the most common hueColor among member annotations
             var hueCount: [Double: Int] = [:]
+            var validAnnotationsCount = 0
+
             for member in cluster.memberAnnotations {
-                if let flutterAnnotation = member as? FlutterAnnotation,
-                   (flutterAnnotation.icon.iconType == .MARKER || flutterAnnotation.icon.iconType == .PIN),
-                   let hueColor = flutterAnnotation.icon.hueColor {
-                    hueCount[hueColor, default: 0] += 1
+                // Validate member annotation first
+                guard let flutterAnnotation = member as? FlutterAnnotation else {
+                    continue
                 }
+
+                // Only consider MARKER and PIN icon types for color calculation
+                guard flutterAnnotation.icon.iconType == .MARKER || flutterAnnotation.icon.iconType == .PIN else {
+                    continue
+                }
+
+                // Validate hue color exists and is in valid range [0, 1]
+                guard let hueColor = flutterAnnotation.icon.hueColor,
+                      hueColor >= 0 && hueColor <= 1 && hueColor.isFinite else {
+                    continue
+                }
+
+                hueCount[hueColor, default: 0] += 1
+                validAnnotationsCount += 1
             }
-            
+
             // Select the most common hueColor or default to blue (hue = 0.6667)
             let mostCommonHue: Double
-            if let (hue, _) = hueCount.max(by: { $0.value < $1.value }) {
+            if let (hue, count) = hueCount.max(by: { $0.value < $1.value }), count > 0 {
                 mostCommonHue = hue
             } else {
+                // Default to blue if no valid colors found or no annotations with colors
                 mostCommonHue = 0.6667 // Default to blue
             }
-            
-            clusterView?.markerTintColor = UIColor(hue: CGFloat(mostCommonHue), saturation: 1, brightness: 1, alpha: 1)
+
+            // Set cluster color with improved saturation based on cluster size and validity
+            let saturation = validAnnotationsCount > 0 ? min(CGFloat(validAnnotationsCount) / 10.0, 1.0) : 0.5
+            clusterView?.markerTintColor = UIColor(hue: CGFloat(mostCommonHue), saturation: saturation, brightness: 1, alpha: 1)
             clusterView?.glyphText = "\(cluster.memberAnnotations.count)"
             
             return clusterView
@@ -108,7 +135,7 @@ extension AppleMapController: AnnotationDelegate {
         }
         annotationView!.annotation = annotation
         // If annotation is not visible set alpha to 0 and don't let the user interact with it
-        if !annotation.isVisible! {
+        if !(annotation.isVisible ?? true) {
             annotationView!.canShowCallout = false
             annotationView!.alpha = CGFloat(0.0)
             annotationView!.isDraggable = false
@@ -131,7 +158,9 @@ extension AppleMapController: AnnotationDelegate {
 
     func annotationsToAdd(annotations: NSArray) {
         for annotation in annotations {
-            let annotationData: Dictionary<String, Any> = annotation as! Dictionary<String, Any>
+            guard let annotationData = annotation as? Dictionary<String, Any> else {
+                continue
+            }
             addAnnotation(annotationData: annotationData)
         }
     }
@@ -139,8 +168,12 @@ extension AppleMapController: AnnotationDelegate {
     func annotationsToChange(annotations: NSArray) {
         let oldAnnotations: [MKAnnotation] = self.mapView.annotations
         for annotation in annotations {
-            let annotationData: Dictionary<String, Any> = annotation as! Dictionary<String, Any>
-            if let annotationToChange = oldAnnotations.filter({($0 as? FlutterAnnotation)?.id == annotationData["annotationId"] as? String})[0] as? FlutterAnnotation {
+            guard let annotationData = annotation as? Dictionary<String, Any>,
+                  let annotationId = annotationData["annotationId"] as? String else {
+                continue
+            }
+            let filteredAnnotations = oldAnnotations.filter({($0 as? FlutterAnnotation)?.id == annotationId})
+            if let annotationToChange = filteredAnnotations.first as? FlutterAnnotation {
                 let newAnnotation = FlutterAnnotation.init(fromDictionary: annotationData, registrar: registrar)
                 if annotationToChange != newAnnotation {
                     if !annotationToChange.wasDragged {
@@ -201,16 +234,17 @@ extension AppleMapController: AnnotationDelegate {
         let y = self.getInfoWindowYOffset(annotationView: annotationView, annotation: annotation)
         annotationView.calloutOffset = CGPoint(x: x, y: y)
         if #available(iOS 9.0, *) {
-            let lines = annotation.subtitle?.split(whereSeparator: { $0.isNewline })
-            if lines != nil {
+            if let subtitle = annotation.subtitle,
+               let lines = subtitle.split(whereSeparator: { $0.isNewline }) as? [String],
+               !lines.isEmpty {
                 let customCallout = UIStackView()
                 customCallout.axis = .vertical
                 customCallout.alignment = .fill
                 customCallout.distribution = .fill
-                for line in lines! {
-                    let subtitle = UILabel()
-                    subtitle.text = String(line)
-                    customCallout.addArrangedSubview(subtitle)
+                for line in lines {
+                    let subtitleLabel = UILabel()
+                    subtitleLabel.text = String(line)
+                    customCallout.addArrangedSubview(subtitleLabel)
                 }
                 annotationView.detailCalloutAccessoryView = customCallout
             }
@@ -218,10 +252,15 @@ extension AppleMapController: AnnotationDelegate {
     }
 
     @objc func onCalloutTapped(infoWindowTap: InfoWindowTapGestureRecognizer) {
-        if infoWindowTap.annotationId != nil && self.currentlySelectedAnnotation == infoWindowTap.annotationId! {
-            self.channel.invokeMethod("infoWindow#onTap", arguments: ["annotationId": infoWindowTap.annotationId])
+        guard let annotationId = infoWindowTap.annotationId else {
+            return
         }
-        if infoWindowTap.annotationView != nil && self.currentlySelectedAnnotation != infoWindowTap.annotationId! {
+
+        if self.currentlySelectedAnnotation == annotationId {
+            self.channel.invokeMethod("infoWindow#onTap", arguments: ["annotationId": annotationId])
+        }
+
+        if infoWindowTap.annotationView != nil && self.currentlySelectedAnnotation != annotationId {
             infoWindowTap.annotationView?.removeGestureRecognizer(infoWindowTap)
         }
     }
@@ -249,7 +288,9 @@ extension AppleMapController: AnnotationDelegate {
         }
         if annotation.zIndex == -1 {
             annotation.zIndex = self.getNextAnnotationZIndex()
-            channel.invokeMethod("annotation#onZIndexChanged", arguments: ["annotationId": annotation.id!, "zIndex": annotation.zIndex])
+            if let annotationId = annotation.id {
+                channel.invokeMethod("annotation#onZIndexChanged", arguments: ["annotationId": annotationId, "zIndex": annotation.zIndex])
+            }
         }
         self.mapView.addAnnotation(annotation)
     }
@@ -291,7 +332,11 @@ extension AppleMapController: AnnotationDelegate {
         var pinAnnotationView: MKPinAnnotationView
         if #available(iOS 11.0, *) {
             self.mapView.register(MKPinAnnotationView.self, forAnnotationViewWithReuseIdentifier: id)
-            pinAnnotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as! MKPinAnnotationView
+            if let dequeuedView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as? MKPinAnnotationView {
+                pinAnnotationView = dequeuedView
+            } else {
+                pinAnnotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: id)
+            }
         } else {
             pinAnnotationView = MKPinAnnotationView.init(annotation: annotation, reuseIdentifier: id)
         }
@@ -307,7 +352,13 @@ extension AppleMapController: AnnotationDelegate {
     @available(iOS 11.0, *)
     private func getMarkerAnnotationView(annotation: FlutterAnnotation, id: String) -> FlutterMarkerAnnotationView {
         self.mapView.register(FlutterMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: id)
-        let markerAnnotationView: FlutterMarkerAnnotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as! FlutterMarkerAnnotationView
+        let markerAnnotationView: FlutterMarkerAnnotationView
+        if let dequeuedView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as? FlutterMarkerAnnotationView {
+            markerAnnotationView = dequeuedView
+        } else {
+            markerAnnotationView = FlutterMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
+        }
+
         markerAnnotationView.stickyZPosition = annotation.zIndex
         markerAnnotationView.displayPriority = annotation.zIndex > 2 ? .required : .defaultHigh
 
@@ -329,7 +380,11 @@ extension AppleMapController: AnnotationDelegate {
         let annotationView: FlutterAnnotationView
         if #available(iOS 11.0, *) {
             self.mapView.register(FlutterAnnotationView.self, forAnnotationViewWithReuseIdentifier: id)
-            annotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as! FlutterAnnotationView
+            if let dequeuedView = self.mapView.dequeueReusableAnnotationView(withIdentifier: id, for: annotation) as? FlutterAnnotationView {
+                annotationView = dequeuedView
+            } else {
+                annotationView = FlutterAnnotationView(annotation: annotation, reuseIdentifier: id)
+            }
         } else {
             annotationView = FlutterAnnotationView(annotation: annotation, reuseIdentifier: id)
         }
@@ -358,30 +413,66 @@ extension AppleMapController: AnnotationDelegate {
     }
 
     private func getRegionForCluster(_ cluster: MKClusterAnnotation) -> MKCoordinateRegion {
+        // Handle edge case of empty cluster
+        guard !cluster.memberAnnotations.isEmpty else {
+            // Return a default region centered on (0,0) with minimal span
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+
         var minLat = Double.infinity
         var maxLat = -Double.infinity
         var minLng = Double.infinity
         var maxLng = -Double.infinity
-        
+        var hasValidCoordinates = false
+
         // Find the bounding box for all annotations in the cluster
         for annotation in cluster.memberAnnotations {
             let coordinate = annotation.coordinate
+
+            // Validate coordinates are not NaN or infinite
+            guard coordinate.latitude.isFinite && coordinate.longitude.isFinite &&
+                  coordinate.latitude >= -90 && coordinate.latitude <= 90 &&
+                  coordinate.longitude >= -180 && coordinate.longitude <= 180 else {
+                continue
+            }
+
             minLat = min(minLat, coordinate.latitude)
             maxLat = max(maxLat, coordinate.latitude)
             minLng = min(minLng, coordinate.longitude)
             maxLng = max(maxLng, coordinate.longitude)
+            hasValidCoordinates = true
         }
-        
+
+        // Handle case where no valid coordinates were found
+        guard hasValidCoordinates else {
+            // Return a default region centered on (0,0) with minimal span
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+
+        // Handle case where all coordinates are the same (single point)
+        if minLat == maxLat && minLng == maxLng {
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: minLat, longitude: minLng),
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+
         // Create a region that encompasses all points
         let center = CLLocationCoordinate2D(
             latitude: (minLat + maxLat) / 2,
             longitude: (minLng + maxLng) / 2
         )
-        
+
         // Add some padding to the region - reduced from 1.5 to 1.2 for better zoom
         let latDelta = (maxLat - minLat) * 1.2 // 20% padding
         let lngDelta = (maxLng - minLng) * 1.2 // 20% padding
-        
+
         // If the cluster has only a few annotations, zoom in more aggressively
         let zoomFactor: Double
         if cluster.memberAnnotations.count <= 3 {
@@ -391,7 +482,7 @@ extension AppleMapController: AnnotationDelegate {
         } else {
             zoomFactor = 1.0 // Standard zoom for large clusters
         }
-        
+
         return MKCoordinateRegion(
             center: center,
             span: MKCoordinateSpan(

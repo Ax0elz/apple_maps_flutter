@@ -35,14 +35,14 @@ Widget _mapWithPolygons(Set<Polygon>? polygons) {
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   final FakePlatformViewsController fakePlatformViewsController =
       FakePlatformViewsController();
 
   setUpAll(() {
-    SystemChannels.platform_views.setMockMethodCallHandler(
-        fakePlatformViewsController.fakePlatformViewsMethodHandler);
+    TestWidgetsFlutterBinding.ensureInitialized();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform_views,
+            fakePlatformViewsController.fakePlatformViewsMethodHandler);
   });
 
   setUp(() {

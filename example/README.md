@@ -29,7 +29,7 @@ class AppleMapsExample extends StatelessWidget {
           children: <Widget>[
             Column(
               children: <Widget>[
-                FlatButton(
+                ElevatedButton(
                   onPressed: () {
                     mapController.moveCamera(
                       CameraUpdate.newCameraPosition(
@@ -44,7 +44,7 @@ class AppleMapsExample extends StatelessWidget {
                   },
                   child: const Text('newCameraPosition'),
                 ),
-                FlatButton(
+                ElevatedButton(
                   onPressed: () {
                     mapController.moveCamera(
                       CameraUpdate.newLatLngZoom(
@@ -59,7 +59,7 @@ class AppleMapsExample extends StatelessWidget {
             ),
             Column(
               children: <Widget>[
-                FlatButton(
+                ElevatedButton(
                   onPressed: () {
                     mapController.moveCamera(
                       CameraUpdate.zoomIn(),
@@ -67,7 +67,7 @@ class AppleMapsExample extends StatelessWidget {
                   },
                   child: const Text('zoomIn'),
                 ),
-                FlatButton(
+                ElevatedButton(
                   onPressed: () {
                     mapController.moveCamera(
                       CameraUpdate.zoomOut(),
@@ -75,7 +75,7 @@ class AppleMapsExample extends StatelessWidget {
                   },
                   child: const Text('zoomOut'),
                 ),
-                FlatButton(
+                ElevatedButton(
                   onPressed: () {
                     mapController.moveCamera(
                       CameraUpdate.zoomTo(16.0),

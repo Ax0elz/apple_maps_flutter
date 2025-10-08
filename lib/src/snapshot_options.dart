@@ -34,10 +34,10 @@ class SnapshotOptions {
   }
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (runtimeType != other.runtimeType) return false;
-    final SnapshotOptions typedOther = other;
+    final SnapshotOptions typedOther = other as SnapshotOptions;
     return showBuildings == typedOther.showBuildings &&
         showPointsOfInterest == typedOther.showPointsOfInterest &&
         showAnnotations == typedOther.showAnnotations &&
@@ -45,7 +45,8 @@ class SnapshotOptions {
   }
 
   @override
-  int get hashCode => Object.hash(showBuildings, showPointsOfInterest);
+  int get hashCode => Object.hash(
+      showBuildings, showPointsOfInterest, showAnnotations, showOverlays);
 
   @override
   String toString() =>

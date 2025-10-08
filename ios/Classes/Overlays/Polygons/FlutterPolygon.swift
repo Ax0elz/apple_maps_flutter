@@ -19,17 +19,40 @@ class FlutterPolygon: MKPolygon {
     var coordinates: [CLLocationCoordinate2D]?
     
     convenience init(fromDictionaray polygonData: Dictionary<String, Any>) {
-        let points = polygonData["points"] as! NSArray
+        // Safely extract points array
+        guard let points = polygonData["points"] as? NSArray,
+              points.count > 0 else {
+            // Initialize with empty coordinates if no valid points provided
+            self.init(coordinates: [], count: 0)
+            self.coordinates = []
+            self.id = polygonData["polygonId"] as? String
+            return
+        }
+
         var _points: [CLLocationCoordinate2D] = []
         for point in points {
-           if let _point: NSArray = point as? NSArray {
-               _points.append(CLLocationCoordinate2D.init(latitude: _point[0] as! CLLocationDegrees, longitude: _point[1] as! CLLocationDegrees))
-           }
+            guard let _point = point as? NSArray,
+                  _point.count >= 2,
+                  let latitude = _point[0] as? CLLocationDegrees,
+                  let longitude = _point[1] as? CLLocationDegrees,
+                  latitude >= -90 && latitude <= 90,
+                  longitude >= -180 && longitude <= 180 else {
+                continue
+            }
+            _points.append(CLLocationCoordinate2D(latitude: latitude, longitude: longitude))
         }
-        self.init(coordinates: _points, count: points.count)
+
+        self.init(coordinates: _points, count: _points.count)
         self.coordinates = _points
-        self.strokeColor = JsonConversions.convertColor(data: polygonData["strokeColor"] as! NSNumber)
-        self.fillColor = JsonConversions.convertColor(data: polygonData["fillColor"] as! NSNumber)
+
+        // Safely extract colors with fallbacks
+        if let strokeColorData = polygonData["strokeColor"] as? NSNumber {
+            self.strokeColor = JsonConversions.convertColor(data: strokeColorData)
+        }
+        if let fillColorData = polygonData["fillColor"] as? NSNumber {
+            self.fillColor = JsonConversions.convertColor(data: fillColorData)
+        }
+
         self.isConsumingTapEvents = polygonData["consumeTapEvents"] as? Bool
         self.width = polygonData["strokeWidth"] as? CGFloat
         self.id = polygonData["polygonId"] as? String
@@ -38,7 +61,13 @@ class FlutterPolygon: MKPolygon {
     }
     
     static func == (lhs: FlutterPolygon, rhs: FlutterPolygon) -> Bool {
-        return lhs.strokeColor == rhs.strokeColor && lhs.fillColor == rhs.fillColor && lhs.isConsumingTapEvents == rhs.isConsumingTapEvents && lhs.width ==  rhs.width && lhs.isVisible == rhs.isVisible && lhs.zIndex == rhs.zIndex && lhs.coordinate.latitude == rhs.coordinate.latitude && lhs.coordinate.longitude == rhs.coordinate.longitude
+        return lhs.strokeColor == rhs.strokeColor &&
+               lhs.fillColor == rhs.fillColor &&
+               lhs.isConsumingTapEvents == rhs.isConsumingTapEvents &&
+               lhs.width == rhs.width &&
+               lhs.isVisible == rhs.isVisible &&
+               lhs.zIndex == rhs.zIndex &&
+               lhs.id == rhs.id
     }
     
     static func != (lhs: FlutterPolygon, rhs: FlutterPolygon) -> Bool {
@@ -56,13 +85,18 @@ extension FlutterPolygon: FlutterOverlay {
         }
             
 
+        // Safely handle coordinates for overlay rendering
+        guard let coordinates = self.coordinates, !coordinates.isEmpty else {
+            return shapeLayer
+        }
+
         // Thus we use snapshot.point() to save the pain.
-        path.move(to: snapshot.point(for: self.coordinates![0]))
-        for coordinate in self.coordinates! {
+        path.move(to: snapshot.point(for: coordinates[0]))
+        for coordinate in coordinates {
             path.addLine(to: snapshot.point(for: coordinate))
         }
-        
-        path.addLine(to: snapshot.point(for: self.coordinates![0]))
+
+        path.addLine(to: snapshot.point(for: coordinates[0]))
         path.close()
         
         shapeLayer.path = path.cgPath

@@ -53,7 +53,8 @@ class AnnotationIcon: Equatable {
         guard let cgImage = image.cgImage else {
             return image
         }
-        guard abs(scale - 1) >= 0 else {
+        // Only scale if the scale factor is significantly different from 1.0
+        guard abs(scale - 1.0) > 0.01 else {
             return image
         }
         return UIImage.init(cgImage: cgImage, scale: 4.0, orientation: image.imageOrientation)

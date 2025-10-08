@@ -60,8 +60,8 @@ extension AppleMapController: PolylineDelegate {
 
     func removePolylines(polylineIds: NSArray) {
         for overlay in self.mapView.overlays {
-            if let polyline = overlay as? FlutterPolyline {
-                if polylineIds.contains(polyline.id!) {
+            if let polyline = overlay as? FlutterPolyline, let polylineId = polyline.id {
+                if polylineIds.contains(polylineId) {
                     self.mapView.removeOverlay(polyline)
                 }
             }

@@ -18,7 +18,7 @@ extension AppleMapController: CircleDelegate {
         let circleRenderer = MKCircleRenderer(overlay: circle)
 
         if let flutterCircle: FlutterCircle = overlay as? FlutterCircle {
-            if flutterCircle.isVisible! {
+            if flutterCircle.isVisible ?? true {
                 circleRenderer.strokeColor = flutterCircle.strokeColor
                 circleRenderer.fillColor = flutterCircle.fillColor
                 circleRenderer.lineWidth = flutterCircle.strokeWidth ?? 1.0
@@ -32,7 +32,9 @@ extension AppleMapController: CircleDelegate {
 
     func addCircles(circleData data: NSArray) {
         for _circle in data {
-            let circleData :Dictionary<String, Any> = _circle as! Dictionary<String, Any>
+            guard let circleData = _circle as? Dictionary<String, Any> else {
+                continue
+            }
             let circle = FlutterCircle(fromDictionaray: circleData)
             addCircle(circle: circle)
         }
@@ -41,24 +43,30 @@ extension AppleMapController: CircleDelegate {
     private func addCircle(circle: FlutterCircle) {
         if circle.zIndex == nil || circle.zIndex == -1 {
             self.mapView.addOverlay(circle)
+        } else if let zIndex = circle.zIndex {
+            self.mapView.insertOverlay(circle, at: zIndex)
         } else {
-            self.mapView.insertOverlay(circle, at: circle.zIndex ?? 0)
+            self.mapView.addOverlay(circle)
         }
     }
 
     func changeCircles(circleData data: NSArray) {
         let oldOverlays: [MKOverlay] = self.mapView.overlays
         for oldOverlay in oldOverlays {
-            if oldOverlay is FlutterCircle {
-                let oldFlutterCircle = oldOverlay as! FlutterCircle
-                for _circle in data {
-                    let circleData :Dictionary<String, Any> = _circle as! Dictionary<String, Any>
-                    if oldFlutterCircle.id == (circleData["circleId"] as! String) {
-                        let newCircle = FlutterCircle.init(fromDictionaray: circleData)
-                        if oldFlutterCircle != newCircle {
-                            updateCirclesOnMap(oldCircle: oldFlutterCircle, newCircle: newCircle)
-                        }
-                    }
+            guard let oldFlutterCircle = oldOverlay as? FlutterCircle else {
+                continue
+            }
+
+            for _circle in data {
+                guard let circleData = _circle as? Dictionary<String, Any>,
+                      let circleId = circleData["circleId"] as? String,
+                      oldFlutterCircle.id == circleId else {
+                    continue
+                }
+
+                let newCircle = FlutterCircle.init(fromDictionaray: circleData)
+                if oldFlutterCircle != newCircle {
+                    updateCirclesOnMap(oldCircle: oldFlutterCircle, newCircle: newCircle)
                 }
             }
         }
@@ -66,8 +74,8 @@ extension AppleMapController: CircleDelegate {
 
     func removeCircles(circleIds: NSArray) {
         for overlay in self.mapView.overlays {
-            if let circle = overlay as? FlutterCircle {
-                if circleIds.contains(circle.id!) {
+            if let circle = overlay as? FlutterCircle, let circleId = circle.id {
+                if circleIds.contains(circleId) {
                     self.mapView.removeOverlay(circle)
                 }
             }

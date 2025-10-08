@@ -155,7 +155,7 @@ class Polyline {
 
     addIfPresent('polylineId', polylineId.value);
     addIfPresent('consumeTapEvents', consumeTapEvents);
-    addIfPresent('color', color.value);
+    addIfPresent('color', color.toARGB32());
     addIfPresent('polylineCap', polylineCap._toJson());
     addIfPresent('jointType', jointType.value);
     addIfPresent('visible', visible);

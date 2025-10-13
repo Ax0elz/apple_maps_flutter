@@ -31,28 +31,25 @@ public class AppleMapController: NSObject, FlutterPlatformView {
         }
         self.options = options
 
-        self.channel = FlutterMethodChannel(name: "apple_maps_plugin.luisthein.de/apple_maps_\(id)", binaryMessenger: registrar.messenger())
-
-        self.mapView = FlutterMapView(channel: channel, options: options)
-        self.registrar = registrar
-
-        // To stop the odd movement of the Apple logo.
-        self.contentView = UIScrollView()
-        self.contentView.addSubview(mapView)
-        mapView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-
         guard let initialCameraPosition = args["initialCameraPosition"] as? Dictionary<String, Any> else {
             fatalError("AppleMapController: Missing required 'initialCameraPosition' parameter")
         }
         self.initialCameraPosition = initialCameraPosition
+
+        self.channel = FlutterMethodChannel(name: "apple_maps_plugin.luisthein.de/apple_maps_\(id)", binaryMessenger: registrar.messenger())
+
+        self.mapView = FlutterMapView(channel: channel, options: options, initialCameraPosition: initialCameraPosition)
+        self.registrar = registrar
+
+        // Use the mapView directly as the content view
+        self.contentView = mapView
  
         
         
         super.init()
         
         self.mapView.delegate = self
-        
-        self.mapView.setCenterCoordinate(initialCameraPosition, animated: false)
+
         self.setMethodCallHandlers()
         
         if let annotationsToAdd: NSArray = args["annotationsToAdd"] as? NSArray {
@@ -395,7 +392,7 @@ extension AppleMapController {
 
                 // Ensure UI operations are performed on main thread
                 DispatchQueue.main.async {
-                    self.renderSnapshotImage(snapshot: snapshot, options: options, context: context) { image in
+                    self.renderSnapshotImage(snapshot: snapshot, options: options) { image in
                         if let imageData = image.pngData() {
                             onCompletion(FlutterStandardTypedData.init(bytes: imageData), nil)
                         } else {
@@ -407,7 +404,7 @@ extension AppleMapController {
         }
     }
 
-    private func renderSnapshotImage(snapshot: MKMapSnapshotter.Snapshot, options: SnapshotOptions, context: UIGraphicsRendererContext, completion: @escaping (UIImage) -> Void) {
+    private func renderSnapshotImage(snapshot: MKMapSnapshotter.Snapshot, options: SnapshotOptions, completion: @escaping (UIImage) -> Void) {
         let image = UIGraphicsImageRenderer(size: self.snapShotOptions.size).image { [weak self] context in
             guard let self = self else {
                 return
@@ -459,10 +456,10 @@ extension AppleMapController {
         guard overlay != nil else {
             return
         }
-        
+
         if let flutterOverlay: FlutterOverlay = overlay as? FlutterOverlay {
             flutterOverlay.getCAShapeLayer(snapshot: snapshot).render(in: context.cgContext)
         }
-        
+
     }
 }

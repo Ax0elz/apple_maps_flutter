@@ -6,8 +6,10 @@
 //
 
 import Foundation
+import UIKit
 import MapKit
 import CoreLocation
+import Flutter
 
 enum BUTTON_IDS: Int {
     case LOCATION = 100
@@ -21,6 +23,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     var options: Dictionary<String, Any>?
     var isMyLocationButtonShowing: Bool? = false
     var clusteringEnabled: Bool = false
+    var initialCameraPosition: Dictionary<String, Any>?
     
     fileprivate let locationManager: CLLocationManager = CLLocationManager()
     
@@ -36,10 +39,11 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         MKUserTrackingMode.followWithHeading,
     ]
     
-    convenience init(channel: FlutterMethodChannel, options: Dictionary<String, Any>) {
-        self.init(frame: CGRect.zero)
+    convenience init(channel: FlutterMethodChannel, options: Dictionary<String, Any>, initialCameraPosition: Dictionary<String, Any>) {
+        self.init(frame: CGRect(x: 0, y: 0, width: 100, height: 100)) // Temporary frame, will be resized by Flutter
         self.channel = channel
         self.options = options
+        self.initialCameraPosition = initialCameraPosition
         initialiseTapGestureRecognizers()
     }
     
@@ -75,11 +79,16 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             if self.options != nil {
                 self.interpretOptions(options: self.options!)
             }
+            // Always ensure the camera position is set when the view is first laid out
+            if oldBounds == nil || oldBounds == .zero || oldBounds == CGRect.zero {
+                if #available(iOS 9.0, *) {
+                    setCenterCoordinateWithAltitude(centerCoordinate: centerCoordinate, zoomLevel: zoomLevel, animated: false)
+                } else {
+                    setCenterCoordinateRegion(centerCoordinate: centerCoordinate, zoomLevel: zoomLevel, animated: false)
+                }
+            }
             if #available(iOS 9.0, *) {
-                setCenterCoordinateWithAltitude(centerCoordinate: centerCoordinate, zoomLevel: zoomLevel, animated: false)
                 mapContainerView = self.findViewOfType("MKScrollContainerView", inView: self)
-            } else {
-                setCenterCoordinateRegion(centerCoordinate: centerCoordinate, zoomLevel: zoomLevel, animated: false)
             }
         }
         oldBounds = self.bounds
@@ -89,6 +98,11 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     override func didMoveToSuperview() {
         if oldBounds != CGRect.zero {
             oldBounds = CGRect.zero
+        }
+        // Apply initial camera position when the view is added to the view hierarchy
+        if let initialPosition = initialCameraPosition {
+            setCenterCoordinate(initialPosition, animated: false)
+            self.initialCameraPosition = nil // Clear it after applying
         }
     }
     

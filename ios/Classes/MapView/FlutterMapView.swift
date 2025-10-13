@@ -40,11 +40,14 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     ]
     
     convenience init(channel: FlutterMethodChannel, options: Dictionary<String, Any>, initialCameraPosition: Dictionary<String, Any>) {
+        print("FlutterMapView: convenience init called with options: \(options), initialCameraPosition: \(initialCameraPosition)")
         self.init(frame: CGRect(x: 0, y: 0, width: 100, height: 100)) // Temporary frame, will be resized by Flutter
+        print("FlutterMapView: MKMapView init completed with frame: \(self.frame)")
         self.channel = channel
         self.options = options
         self.initialCameraPosition = initialCameraPosition
         initialiseTapGestureRecognizers()
+        print("FlutterMapView: convenience init completed")
     }
     
     var actualHeading: CLLocationDirection {
@@ -74,21 +77,28 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     // Because the self is layed out using an auto layout we have to call
     // setCenterCoordinate after the self was layed out.
     override func layoutSubviews() {
+        print("FlutterMapView: layoutSubviews called, bounds: \(self.bounds), oldBounds: \(oldBounds)")
         // Only update the map in layoutSubviews if the bounds changed
         if self.bounds != oldBounds {
+            print("FlutterMapView: bounds changed, applying options and camera")
             if self.options != nil {
                 self.interpretOptions(options: self.options!)
+                print("FlutterMapView: options interpreted")
             }
             // Always ensure the camera position is set when the view is first laid out
             if oldBounds == nil || oldBounds == .zero || oldBounds == CGRect.zero {
+                print("FlutterMapView: first layout, setting camera position")
                 if #available(iOS 9.0, *) {
                     setCenterCoordinateWithAltitude(centerCoordinate: centerCoordinate, zoomLevel: zoomLevel, animated: false)
+                    print("FlutterMapView: camera set with altitude")
                 } else {
                     setCenterCoordinateRegion(centerCoordinate: centerCoordinate, zoomLevel: zoomLevel, animated: false)
+                    print("FlutterMapView: camera set with region")
                 }
             }
             if #available(iOS 9.0, *) {
                 mapContainerView = self.findViewOfType("MKScrollContainerView", inView: self)
+                print("FlutterMapView: mapContainerView found: \(mapContainerView != nil)")
             }
         }
         oldBounds = self.bounds
@@ -96,13 +106,20 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
     
     
     override func didMoveToSuperview() {
+        print("FlutterMapView: didMoveToSuperview called, superview: \(superview), initialCameraPosition: \(initialCameraPosition)")
         if oldBounds != CGRect.zero {
             oldBounds = CGRect.zero
+            print("FlutterMapView: oldBounds reset to zero")
         }
         // Apply initial camera position when the view is added to the view hierarchy
         if let initialPosition = initialCameraPosition {
+            print("FlutterMapView: applying initial camera position: \(initialPosition)")
             setCenterCoordinate(initialPosition, animated: false)
+            print("FlutterMapView: initial camera position applied")
             self.initialCameraPosition = nil // Clear it after applying
+            print("FlutterMapView: initialCameraPosition cleared")
+        } else {
+            print("FlutterMapView: no initial camera position to apply")
         }
     }
     

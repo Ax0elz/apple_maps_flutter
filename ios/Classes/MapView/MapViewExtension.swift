@@ -85,8 +85,10 @@ public extension MKMapView {
     }
     
     func setCenterCoordinate(_ positionData: Dictionary<String, Any>, animated: Bool) {
+        print("MapViewExtension: setCenterCoordinate called with positionData: \(positionData), animated: \(animated)")
         let targetList :Array<CLLocationDegrees> = positionData["target"] as? Array<CLLocationDegrees> ?? [self.camera.centerCoordinate.latitude, self.camera.centerCoordinate.longitude]
         let zoom :Double = positionData["zoom"] as? Double ?? Holder._zoomLevel
+        print("MapViewExtension: target: \(targetList), zoom: \(zoom)")
         Holder._zoomLevel = zoom
         if let pitch :CGFloat = positionData["pitch"] as? CGFloat {
             Holder._pitch = pitch
@@ -95,10 +97,13 @@ public extension MKMapView {
             Holder._heading = heading
         }
         let centerCoordinate :CLLocationCoordinate2D = CLLocationCoordinate2D(latitude:  targetList[0], longitude: targetList[1])
+        print("MapViewExtension: centerCoordinate: \(centerCoordinate)")
         if #available(iOS 9.0, *) {
             self.setCenterCoordinateWithAltitude(centerCoordinate: centerCoordinate, zoomLevel: zoom, animated: animated)
+            print("MapViewExtension: setCenterCoordinateWithAltitude called")
         } else {
             self.setCenterCoordinateRegion(centerCoordinate: centerCoordinate, zoomLevel: zoom, animated: animated)
+            print("MapViewExtension: setCenterCoordinateRegion called")
         }
     }
     

@@ -28,42 +28,29 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     public init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withargs args: Dictionary<String, Any> ,withId id: Int64) {
-        NSLog("🟡 AppleMapController: init called with frame: \(frame)")
         guard let options = args["options"] as? [String: Any] else {
-            NSLog("❌ AppleMapController: Missing required 'options' parameter")
             fatalError("AppleMapController: Missing required 'options' parameter")
         }
         self.options = options
-        NSLog("🟡 AppleMapController: options parsed: \(options)")
 
         guard let initialCameraPosition = args["initialCameraPosition"] as? Dictionary<String, Any> else {
-            NSLog("❌ AppleMapController: Missing required 'initialCameraPosition' parameter")
             fatalError("AppleMapController: Missing required 'initialCameraPosition' parameter")
         }
         self.initialCameraPosition = initialCameraPosition
-        NSLog("🟡 AppleMapController: initialCameraPosition: \(initialCameraPosition)")
 
         self.channel = FlutterMethodChannel(name: "apple_maps_plugin.luisthein.de/apple_maps_\(id)", binaryMessenger: registrar.messenger())
-        NSLog("🟡 AppleMapController: FlutterMethodChannel created with id: \(id)")
 
         self.mapView = FlutterMapView(channel: channel, options: options, initialCameraPosition: initialCameraPosition)
         self.registrar = registrar
-        NSLog("🟡 AppleMapController: FlutterMapView created")
 
         // Use the mapView directly as the content view
         self.contentView = mapView
-        NSLog("🟡 AppleMapController: contentView set to mapView")
-
-        
         
         super.init()
-        NSLog("🟡 AppleMapController: super.init() completed")
 
         self.mapView.delegate = self
-        NSLog("🟡 AppleMapController: delegate set")
 
         self.setMethodCallHandlers()
-        NSLog("🟡 AppleMapController: method call handlers set")
         
         if let annotationsToAdd: NSArray = args["annotationsToAdd"] as? NSArray {
             self.annotationsToAdd(annotations: annotationsToAdd)
@@ -80,7 +67,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     }
     
     public func view() -> UIView {
-        NSLog("🟡 AppleMapController: view() called, returning contentView: \(contentView)")
         return contentView
     }
     

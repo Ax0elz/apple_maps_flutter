@@ -3,8 +3,6 @@
 
 @implementation AppleMapsFlutterPlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-  NSLog(@"🔌 AppleMapsFlutterPlugin: Objective-C registerWithRegistrar called");
   [SwiftAppleMapsFlutterPlugin registerWithRegistrar:registrar];
-  NSLog(@"🔌 AppleMapsFlutterPlugin: SwiftAppleMapsFlutterPlugin registerWithRegistrar completed");
 }
 @end

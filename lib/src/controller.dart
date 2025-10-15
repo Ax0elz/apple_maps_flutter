@@ -11,8 +11,6 @@ class AppleMapController {
     CameraPosition initialCameraPosition,
     this._appleMapState,
   ) {
-    print(
-        '🎮 AppleMapController: Constructor called, setting up method call handler');
     channel.setMethodCallHandler(_handleMethodCall);
   }
 
@@ -21,20 +19,11 @@ class AppleMapController {
     CameraPosition initialCameraPosition,
     _AppleMapState appleMapState,
   ) async {
-    print('🎮 AppleMapController: init() called with id: $id');
-    print(
-        '🎮 AppleMapController: Initial camera position: ${initialCameraPosition.target}');
-    final MethodChannel channel =
-        MethodChannel('apple_maps_plugin.luisthein.de/apple_maps_$id');
-    print('🎮 AppleMapController: MethodChannel created: ${channel.name}');
-    // await channel.invokeMethod<void>('map#waitForMap');
-    final controller = AppleMapController._(
-      channel,
-      initialCameraPosition,
-      appleMapState,
+    final MethodChannel channel = MethodChannel(
+      'apple_maps_plugin.luisthein.de/apple_maps_$id',
     );
-    print('🎮 AppleMapController: Controller created successfully');
-    return controller;
+    // await channel.invokeMethod<void>('map#waitForMap');
+    return AppleMapController._(channel, initialCameraPosition, appleMapState);
   }
 
   @visibleForTesting
@@ -43,64 +32,54 @@ class AppleMapController {
   final _AppleMapState _appleMapState;
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
-    print('📞 AppleMapController: Received method call: ${call.method}');
     switch (call.method) {
       case 'camera#onMoveStarted':
-        print('📷 Camera move started');
         _appleMapState.widget.onCameraMoveStarted?.call();
         break;
       case 'camera#onMove':
-        print('📷 Camera moving');
         _appleMapState.widget.onCameraMove?.call(
           CameraPosition.fromMap(call.arguments['position'])!,
         );
         break;
       case 'camera#onIdle':
-        print('📷 Camera idle');
         _appleMapState.widget.onCameraIdle?.call();
         break;
       case 'annotation#onTap':
-        print('📍 Annotation tapped: ${call.arguments['annotationId']}');
         _appleMapState.onAnnotationTap(call.arguments['annotationId']);
         break;
       case 'polyline#onTap':
-        print('📏 Polyline tapped: ${call.arguments['polylineId']}');
         _appleMapState.onPolylineTap(call.arguments['polylineId']);
         break;
       case 'polygon#onTap':
-        print('🔷 Polygon tapped: ${call.arguments['polygonId']}');
         _appleMapState.onPolygonTap(call.arguments['polygonId']);
         break;
       case 'circle#onTap':
-        print('⭕ Circle tapped: ${call.arguments['circleId']}');
         _appleMapState.onCircleTap(call.arguments['circleId']);
         break;
       case 'annotation#onDragEnd':
-        print('📍 Annotation drag ended: ${call.arguments['annotationId']}');
-        _appleMapState.onAnnotationDragEnd(call.arguments['annotationId'],
-            LatLng._fromJson(call.arguments['position'])!);
+        _appleMapState.onAnnotationDragEnd(
+          call.arguments['annotationId'],
+          LatLng._fromJson(call.arguments['position'])!,
+        );
         break;
       case 'infoWindow#onTap':
-        print('ℹ️ Info window tapped: ${call.arguments['annotationId']}');
         _appleMapState.onInfoWindowTap(call.arguments['annotationId']);
         break;
       case 'annotation#onZIndexChanged':
-        print(
-            '📍 Annotation z-index changed: ${call.arguments['annotationId']}');
         _appleMapState.onAnnotationZIndexChanged(
-            call.arguments['annotationId'], call.arguments['zIndex']);
+          call.arguments['annotationId'],
+          call.arguments['zIndex'],
+        );
         break;
       case 'map#onTap':
-        print('🗺️ Map tapped at: ${call.arguments['position']}');
         _appleMapState.onTap(LatLng._fromJson(call.arguments['position'])!);
         break;
       case 'map#onLongPress':
-        print('🗺️ Map long pressed at: ${call.arguments['position']}');
-        _appleMapState
-            .onLongPress(LatLng._fromJson(call.arguments['position'])!);
+        _appleMapState.onLongPress(
+          LatLng._fromJson(call.arguments['position'])!,
+        );
         break;
       default:
-        print('⚠️ Unknown method call: ${call.method}');
         throw MissingPluginException();
     }
   }
@@ -112,12 +91,9 @@ class AppleMapController {
   ///
   /// The returned [Future] completes after listeners have been notified.
   Future<void> _updateMapOptions(Map<String, dynamic> optionsUpdate) async {
-    await channel.invokeMethod<void>(
-      'map#update',
-      <String, dynamic>{
-        'options': optionsUpdate,
-      },
-    );
+    await channel.invokeMethod<void>('map#update', <String, dynamic>{
+      'options': optionsUpdate,
+    });
   }
 
   /// Updates annotation configuration.
@@ -166,10 +142,7 @@ class AppleMapController {
   ///
   /// The returned [Future] completes after listeners have been notified.
   Future<void> _updateCircles(_CircleUpdates circleUpdates) async {
-    await channel.invokeMethod<void>(
-      'circles#update',
-      circleUpdates._toMap(),
-    );
+    await channel.invokeMethod<void>('circles#update', circleUpdates._toMap());
   }
 
   /// Starts an animated change of the map camera position.
@@ -191,8 +164,10 @@ class AppleMapController {
   ///   * [hideMarkerInfoWindow] to hide the Info Window.
   ///   * [isMarkerInfoWindowShown] to check if the Info Window is showing.
   Future<void> showMarkerInfoWindow(AnnotationId annotationId) {
-    return channel.invokeMethod<void>('annotations#showInfoWindow',
-        <String, String>{'annotationId': annotationId.value});
+    return channel.invokeMethod<void>(
+      'annotations#showInfoWindow',
+      <String, String>{'annotationId': annotationId.value},
+    );
   }
 
   /// Programmatically hide the Info Window for a [Marker].
@@ -204,8 +179,10 @@ class AppleMapController {
   ///   * [showMarkerInfoWindow] to show the Info Window.
   ///   * [isMarkerInfoWindowShown] to check if the Info Window is showing.
   Future<void> hideMarkerInfoWindow(AnnotationId annotationId) {
-    return channel.invokeMethod<void>('annotations#hideInfoWindow',
-        <String, String>{'annotationId': annotationId.value});
+    return channel.invokeMethod<void>(
+      'annotations#hideInfoWindow',
+      <String, String>{'annotationId': annotationId.value},
+    );
   }
 
   /// Returns `true` when the [InfoWindow] is showing, `false` otherwise.
@@ -217,8 +194,10 @@ class AppleMapController {
   ///   * [showMarkerInfoWindow] to show the Info Window.
   ///   * [hideMarkerInfoWindow] to hide the Info Window.
   Future<bool?> isMarkerInfoWindowShown(AnnotationId annotationId) {
-    return channel.invokeMethod<bool>('annotations#isInfoWindowShown',
-        <String, String>{'annotationId': annotationId.value});
+    return channel.invokeMethod<bool>(
+      'annotations#isInfoWindowShown',
+      <String, String>{'annotationId': annotationId.value},
+    );
   }
 
   /// Changes the map camera position without animating the transition.
@@ -238,8 +217,8 @@ class AppleMapController {
 
   /// Return [LatLngBounds] defining the region that is visible in a map.
   Future<LatLngBounds> getVisibleRegion() async {
-    final Map<String, dynamic>? latLngBounds =
-        await channel.invokeMapMethod<String, dynamic>('map#getVisibleRegion');
+    final Map<String, dynamic>? latLngBounds = await channel
+        .invokeMapMethod<String, dynamic>('map#getVisibleRegion');
     final LatLng southwest = LatLng._fromJson(latLngBounds?['southwest'])!;
     final LatLng northeast = LatLng._fromJson(latLngBounds?['northeast'])!;
 
@@ -250,10 +229,12 @@ class AppleMapController {
   /// Screen location is in screen pixels (not display pixels) with respect to the top left corner
   /// of the map, not necessarily of the whole screen.
   Future<Offset?> getScreenCoordinate(LatLng latLng) async {
-    final point = await channel
-        .invokeMapMethod<String, dynamic>('camera#convert', <String, dynamic>{
-      'annotation': [latLng.latitude, latLng.longitude]
-    });
+    final point = await channel.invokeMapMethod<String, dynamic>(
+      'camera#convert',
+      <String, dynamic>{
+        'annotation': [latLng.latitude, latLng.longitude],
+      },
+    );
     if (point != null && !point.containsKey('point')) {
       return null;
     }
@@ -262,9 +243,12 @@ class AppleMapController {
   }
 
   /// Returns the image bytes of the map
-  Future<Uint8List?> takeSnapshot(
-      [SnapshotOptions snapshotOptions = const SnapshotOptions()]) {
+  Future<Uint8List?> takeSnapshot([
+    SnapshotOptions snapshotOptions = const SnapshotOptions(),
+  ]) {
     return channel.invokeMethod<Uint8List>(
-        'map#takeSnapshot', snapshotOptions._toMap());
+      'map#takeSnapshot',
+      snapshotOptions._toMap(),
+    );
   }
 }

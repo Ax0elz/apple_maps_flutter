@@ -52,7 +52,6 @@ class MapUiBodyState extends State<MapUiBody> {
   @override
   void initState() {
     super.initState();
-    print('🎯 MapUiBodyState: initState() called');
   }
 
   @override
@@ -169,7 +168,6 @@ class MapUiBodyState extends State<MapUiBody> {
 
   @override
   Widget build(BuildContext context) {
-    print('🎯 MapUiBodyState: build() called');
     final AppleMap appleMap = AppleMap(
       onMapCreated: onMapCreated,
       trackingMode: _trackingMode,
@@ -186,7 +184,6 @@ class MapUiBodyState extends State<MapUiBody> {
       padding: const EdgeInsets.all(10),
       onCameraMove: _updateCameraPosition,
     );
-    print('🎯 MapUiBodyState: AppleMap widget created');
 
     final List<Widget> columnChildren = <Widget>[
       Expanded(child: appleMap),
@@ -228,14 +225,12 @@ class MapUiBodyState extends State<MapUiBody> {
   }
 
   void _updateCameraPosition(CameraPosition position) {
-    print('📷 MapUiBodyState: Camera position updated: ${position.target}');
     setState(() {
       _position = position;
     });
   }
 
   void onMapCreated(AppleMapController controller) {
-    print('✅ MapUiBodyState: onMapCreated() callback received - map is ready!');
     setState(() {
       _isMapCreated = true;
     });

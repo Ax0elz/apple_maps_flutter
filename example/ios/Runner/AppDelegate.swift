@@ -7,8 +7,12 @@ import Flutter
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    print("📱 AppDelegate: didFinishLaunchingWithOptions called")
     GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    print("📱 AppDelegate: GeneratedPluginRegistrant.register completed")
+    let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    print("📱 AppDelegate: super.application returned: \(result)")
+    return result
   }
   
   // MARK: - UISceneSession Lifecycle

@@ -11,6 +11,8 @@ class AppleMapController {
     CameraPosition initialCameraPosition,
     this._appleMapState,
   ) {
+    print(
+        '🎮 AppleMapController: Constructor called, setting up method call handler');
     channel.setMethodCallHandler(_handleMethodCall);
   }
 
@@ -19,14 +21,20 @@ class AppleMapController {
     CameraPosition initialCameraPosition,
     _AppleMapState appleMapState,
   ) async {
+    print('🎮 AppleMapController: init() called with id: $id');
+    print(
+        '🎮 AppleMapController: Initial camera position: ${initialCameraPosition.target}');
     final MethodChannel channel =
         MethodChannel('apple_maps_plugin.luisthein.de/apple_maps_$id');
+    print('🎮 AppleMapController: MethodChannel created: ${channel.name}');
     // await channel.invokeMethod<void>('map#waitForMap');
-    return AppleMapController._(
+    final controller = AppleMapController._(
       channel,
       initialCameraPosition,
       appleMapState,
     );
+    print('🎮 AppleMapController: Controller created successfully');
+    return controller;
   }
 
   @visibleForTesting
@@ -35,49 +43,64 @@ class AppleMapController {
   final _AppleMapState _appleMapState;
 
   Future<dynamic> _handleMethodCall(MethodCall call) async {
+    print('📞 AppleMapController: Received method call: ${call.method}');
     switch (call.method) {
       case 'camera#onMoveStarted':
+        print('📷 Camera move started');
         _appleMapState.widget.onCameraMoveStarted?.call();
         break;
       case 'camera#onMove':
+        print('📷 Camera moving');
         _appleMapState.widget.onCameraMove?.call(
           CameraPosition.fromMap(call.arguments['position'])!,
         );
         break;
       case 'camera#onIdle':
+        print('📷 Camera idle');
         _appleMapState.widget.onCameraIdle?.call();
         break;
       case 'annotation#onTap':
+        print('📍 Annotation tapped: ${call.arguments['annotationId']}');
         _appleMapState.onAnnotationTap(call.arguments['annotationId']);
         break;
       case 'polyline#onTap':
+        print('📏 Polyline tapped: ${call.arguments['polylineId']}');
         _appleMapState.onPolylineTap(call.arguments['polylineId']);
         break;
       case 'polygon#onTap':
+        print('🔷 Polygon tapped: ${call.arguments['polygonId']}');
         _appleMapState.onPolygonTap(call.arguments['polygonId']);
         break;
       case 'circle#onTap':
+        print('⭕ Circle tapped: ${call.arguments['circleId']}');
         _appleMapState.onCircleTap(call.arguments['circleId']);
         break;
       case 'annotation#onDragEnd':
+        print('📍 Annotation drag ended: ${call.arguments['annotationId']}');
         _appleMapState.onAnnotationDragEnd(call.arguments['annotationId'],
             LatLng._fromJson(call.arguments['position'])!);
         break;
       case 'infoWindow#onTap':
+        print('ℹ️ Info window tapped: ${call.arguments['annotationId']}');
         _appleMapState.onInfoWindowTap(call.arguments['annotationId']);
         break;
       case 'annotation#onZIndexChanged':
+        print(
+            '📍 Annotation z-index changed: ${call.arguments['annotationId']}');
         _appleMapState.onAnnotationZIndexChanged(
             call.arguments['annotationId'], call.arguments['zIndex']);
         break;
       case 'map#onTap':
+        print('🗺️ Map tapped at: ${call.arguments['position']}');
         _appleMapState.onTap(LatLng._fromJson(call.arguments['position'])!);
         break;
       case 'map#onLongPress':
+        print('🗺️ Map long pressed at: ${call.arguments['position']}');
         _appleMapState
             .onLongPress(LatLng._fromJson(call.arguments['position'])!);
         break;
       default:
+        print('⚠️ Unknown method call: ${call.method}');
         throw MissingPluginException();
     }
   }

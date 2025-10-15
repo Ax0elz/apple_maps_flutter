@@ -190,6 +190,7 @@ class _AppleMapState extends State<AppleMap> {
 
   @override
   Widget build(BuildContext context) {
+    print('🗺️ AppleMap: build() called - platform: $defaultTargetPlatform');
     final Map<String, dynamic> creationParams = <String, dynamic>{
       'initialCameraPosition': widget.initialCameraPosition._toMap(),
       'options': _appleMapOptions.toMap(),
@@ -198,7 +199,9 @@ class _AppleMapState extends State<AppleMap> {
       'polygonsToAdd': _serializePolygonSet(widget.polygons),
       'circlesToAdd': _serializeCircleSet(widget.circles),
     };
+    print('🗺️ AppleMap: creationParams: $creationParams');
     if (defaultTargetPlatform == TargetPlatform.iOS) {
+      print('🗺️ AppleMap: Creating UiKitView for iOS');
       return UiKitView(
         viewType: 'apple_maps_plugin.luisthein.de/apple_maps',
         onPlatformViewCreated: onPlatformViewCreated,
@@ -207,6 +210,7 @@ class _AppleMapState extends State<AppleMap> {
         creationParamsCodec: const StandardMessageCodec(),
       );
     }
+    print('⚠️ AppleMap: Platform $defaultTargetPlatform is not supported');
     return Text(
         '$defaultTargetPlatform is not yet supported by the apple maps plugin');
   }
@@ -214,11 +218,14 @@ class _AppleMapState extends State<AppleMap> {
   @override
   void initState() {
     super.initState();
+    print('🗺️ AppleMap: initState() called');
     _appleMapOptions = _AppleMapOptions.fromWidget(widget);
     _annotations = _keyByAnnotationId(widget.annotations);
     _polylines = _keyByPolylineId(widget.polylines);
     _polygons = _keyByPolygonId(widget.polygons);
     _circles = _keyByCircleId(widget.circles);
+    print(
+        '🗺️ AppleMap: initState() completed - annotations: ${_annotations.length}, polylines: ${_polylines.length}');
   }
 
   @override
@@ -274,13 +281,22 @@ class _AppleMapState extends State<AppleMap> {
   }
 
   Future<void> onPlatformViewCreated(int id) async {
-    final AppleMapController controller = await AppleMapController.init(
-      id,
-      widget.initialCameraPosition,
-      this,
-    );
-    _controller.complete(controller);
-    widget.onMapCreated?.call(controller);
+    print('🗺️ AppleMap: onPlatformViewCreated() called with id: $id');
+    try {
+      final AppleMapController controller = await AppleMapController.init(
+        id,
+        widget.initialCameraPosition,
+        this,
+      );
+      print('🗺️ AppleMap: Controller initialized successfully');
+      _controller.complete(controller);
+      widget.onMapCreated?.call(controller);
+      print('🗺️ AppleMap: onMapCreated callback completed');
+    } catch (e, stackTrace) {
+      print('❌ AppleMap: Error in onPlatformViewCreated: $e');
+      print('❌ AppleMap: Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   void onAnnotationTap(String annotationIdParam) {

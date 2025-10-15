@@ -62,5 +62,6 @@ class MapsDemo extends StatelessWidget {
 }
 
 void main() {
+  print('🚀 Starting Apple Maps Flutter Example App');
   runApp(MaterialApp(home: MapsDemo()));
 }

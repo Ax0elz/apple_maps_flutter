@@ -17,12 +17,12 @@ public class AppleMapViewFactory: NSObject, FlutterPlatformViewFactory {
     }
     
     public func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> FlutterPlatformView {
-        print("AppleMapViewFactory: create called with frame: \(frame), viewId: \(viewId)")
+        NSLog("🟢 AppleMapViewFactory: create called with frame: \(frame), viewId: \(viewId)")
         let argsDictionary =  args as! Dictionary<String, Any>
-        print("AppleMapViewFactory: argsDictionary: \(argsDictionary)")
+        NSLog("🟢 AppleMapViewFactory: argsDictionary: \(argsDictionary)")
 
         let controller = AppleMapController(withFrame: frame, withRegistrar: registrar, withargs: argsDictionary, withId: viewId)
-        print("AppleMapViewFactory: AppleMapController created")
+        NSLog("🟢 AppleMapViewFactory: AppleMapController created")
         return controller
     }
     

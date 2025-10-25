@@ -308,10 +308,20 @@ extension AppleMapController: AnnotationDelegate {
                 oldAnnotation.systemImageName = annotation.systemImageName
             })
             
-            // Update the annotation view with the new image
+            // Update the annotation view with the new appearance
             if let view = self.mapView.view(for: oldAnnotation) {
                 let newAnnotationView = getAnnotationView(annotation: annotation)
-                view.image = newAnnotationView.image
+
+                // For marker annotation views, we need to update the specific properties
+                if #available(iOS 11.0, *), let markerView = view as? MKMarkerAnnotationView,
+                   let newMarkerView = newAnnotationView as? MKMarkerAnnotationView {
+                    // Update marker-specific properties
+                    markerView.markerTintColor = newMarkerView.markerTintColor
+                    markerView.glyphImage = newMarkerView.glyphImage
+                } else {
+                    // For other annotation views, update the image
+                    view.image = newAnnotationView.image
+                }
             }
         }
     }
@@ -343,7 +353,8 @@ extension AppleMapController: AnnotationDelegate {
         pinAnnotationView.layer.zPosition = annotation.zIndex
 
         if let hueColor: Double = annotation.icon.hueColor {
-            pinAnnotationView.pinTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: 1)
+            let alpha = annotation.alpha ?? 1.0
+            pinAnnotationView.pinTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: alpha)
         }
 
         return pinAnnotationView
@@ -362,15 +373,29 @@ extension AppleMapController: AnnotationDelegate {
         markerAnnotationView.stickyZPosition = annotation.zIndex
         markerAnnotationView.displayPriority = annotation.zIndex > 2 ? .required : .defaultHigh
 
+        // Determine the tint color to use
+        var tintColor: UIColor?
         if let hueColor: Double = annotation.icon.hueColor {
-            markerAnnotationView.markerTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: 1)
+            let alpha = annotation.alpha ?? 1.0
+            tintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: alpha)
         }
 
         if let systemImageName = annotation.systemImageName {
-            let image = UIImage(systemName: systemImageName)
+            var image = UIImage(systemName: systemImageName)
             let padding: CGFloat = 4.0
+
+            // Apply tint color to the system image if available
+            if let tintColor = tintColor {
+                image = image?.withTintColor(tintColor, renderingMode: .alwaysOriginal)
+            }
+
             let paddedImage = image?.withAlignmentRectInsets(UIEdgeInsets(top: padding, left: padding, bottom: padding, right: padding))
             markerAnnotationView.glyphImage = paddedImage
+        }
+
+        // Set the marker tint color (used for non-system icon markers)
+        if let tintColor = tintColor {
+            markerAnnotationView.markerTintColor = tintColor
         }
 
         return markerAnnotationView

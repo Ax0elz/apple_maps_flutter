@@ -110,11 +110,15 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         // Handle theme changes when the system appearance changes
         if #available(iOS 13.0, *) {
             if traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
-                // Only update if we're using system theme (theme index 0)
-                if let options = self.options,
-                   let mapThemeIndex = options["mapTheme"] as? Int,
-                   mapThemeIndex == 0 { // system theme
-                    applyTheme(mapThemeIndex)
+                // Only update if we're using system theme (theme index 0) and no forced appearance is set
+                if forcedUserInterfaceStyle == nil {
+                    if let options = self.options,
+                       let mapThemeIndex = options["mapTheme"] as? Int,
+                       mapThemeIndex == 0 { // system theme
+                        // For system theme, just trigger a refresh without changing the theme setting
+                        setNeedsLayout()
+                        setNeedsDisplay()
+                    }
                 }
             }
         }
@@ -136,6 +140,13 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             print("FlutterMapView: initialCameraPosition cleared")
         } else {
             print("FlutterMapView: no initial camera position to apply")
+        }
+
+        // Ensure appearance is applied when the view is added to superview
+        if #available(iOS 13.0, *) {
+            if let style = forcedUserInterfaceStyle {
+                configureMapAppearance(for: style)
+            }
         }
     }
     
@@ -275,12 +286,13 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         // 0: system, 1: light, 2: dark (same as Flutter's ThemeMode)
         switch themeIndex {
         case 0: // system
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                let userInterfaceStyle = windowScene.traitCollection.userInterfaceStyle
-                configureMapAppearance(for: userInterfaceStyle == .dark ? .dark : .light)
-            } else {
-                configureMapAppearance(for: .light)
-            }
+            // Clear any forced appearance to follow system theme
+            forcedUserInterfaceStyle = nil
+            // Reset to unspecified to allow system theme to take over
+            self.overrideUserInterfaceStyle = .unspecified
+            // Force refresh to apply system theme
+            setNeedsLayout()
+            setNeedsDisplay()
         case 1: // light
             configureMapAppearance(for: .light)
         case 2: // dark
@@ -292,18 +304,48 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
 
     @available(iOS 13.0, *)
     func configureMapAppearance(for style: UIUserInterfaceStyle) {
-        // Configure map appearance based on the style
-        switch style {
-        case .light:
-            // Configure for light mode
-            self.overrideUserInterfaceStyle = .light
-        case .dark:
-            // Configure for dark mode
-            self.overrideUserInterfaceStyle = .dark
-        @unknown default:
-            break
+        // Set appearance only on this specific instance to avoid affecting other map instances
+        self.overrideUserInterfaceStyle = style
+
+        // Store the desired appearance style for trait collection override
+        forcedUserInterfaceStyle = style
+
+        // Force the map to update its appearance
+        if #available(iOS 13.0, *) {
+            // Trigger a complete refresh of the map view
+            setNeedsLayout()
+            setNeedsDisplay()
+            layoutIfNeeded()
+
+            // Force a map reload by temporarily changing zoom level
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                let currentCenter = self.centerCoordinate
+                let currentZoom = self.getZoomLevel()
+                self.setCenterCoordinate(currentCenter, zoomLevel: currentZoom, animated: false)
+            }
         }
     }
+
+    @available(iOS 13.0, *)
+    override var traitCollection: UITraitCollection {
+        // Override trait collection to force the desired appearance
+        if let forcedStyle = forcedUserInterfaceStyle {
+            return UITraitCollection(traitsFrom: [super.traitCollection, UITraitCollection(userInterfaceStyle: forcedStyle)])
+        }
+        return super.traitCollection
+    }
+
+    @available(iOS 13.0, *)
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        // Ensure appearance is applied when the view moves to a window
+        if let style = forcedUserInterfaceStyle {
+            configureMapAppearance(for: style)
+        }
+    }
+
+    @available(iOS 13.0, *)
+    private var forcedUserInterfaceStyle: UIUserInterfaceStyle?
 
     func setUserLocation() {
         let authorizationStatus: CLAuthorizationStatus
@@ -456,3 +498,4 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         return CGFloat(sqrt(xDist * xDist + yDist * yDist))
     }
 }
+

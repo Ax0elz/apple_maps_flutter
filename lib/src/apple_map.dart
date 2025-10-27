@@ -449,9 +449,10 @@ class _AppleMapOptions {
   Map<String, dynamic> updatesMap(_AppleMapOptions newOptions) {
     final Map<String, dynamic> prevOptionsMap = toMap();
 
-    return newOptions.toMap()..removeWhere(
-      (String key, dynamic value) => prevOptionsMap[key] == value,
-    );
+    return newOptions.toMap()
+      ..removeWhere(
+        (String key, dynamic value) => prevOptionsMap[key] == value,
+      );
   }
 
   List<double>? _serializePadding(EdgeInsets? insets) {

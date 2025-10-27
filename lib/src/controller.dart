@@ -227,8 +227,8 @@ class AppleMapController {
 
   /// Return [LatLngBounds] defining the region that is visible in a map.
   Future<LatLngBounds> getVisibleRegion() async {
-    final Map<String, dynamic>? latLngBounds = await channel
-        .invokeMapMethod<String, dynamic>('map#getVisibleRegion');
+    final Map<String, dynamic>? latLngBounds =
+        await channel.invokeMapMethod<String, dynamic>('map#getVisibleRegion');
     final LatLng southwest = LatLng._fromJson(latLngBounds?['southwest'])!;
     final LatLng northeast = LatLng._fromJson(latLngBounds?['northeast'])!;
 

@@ -245,6 +245,28 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
                 }
             }
         }
+
+        if let mapThemeIndex = options["mapTheme"] as? Int {
+            if #available(iOS 13.0, *) {
+                self.applyTheme(mapThemeIndex)
+            }
+        }
+    }
+
+    @available(iOS 13.0, *)
+    func applyTheme(_ themeIndex: Int) {
+        // Map the theme index to UIUserInterfaceStyle
+        // 0: system, 1: light, 2: dark (same as Flutter's ThemeMode)
+        switch themeIndex {
+        case 0: // system
+            self.overrideUserInterfaceStyle = .unspecified
+        case 1: // light
+            self.overrideUserInterfaceStyle = .light
+        case 2: // dark
+            self.overrideUserInterfaceStyle = .dark
+        default:
+            self.overrideUserInterfaceStyle = .unspecified
+        }
     }
     
     func setUserLocation() {

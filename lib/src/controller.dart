@@ -96,6 +96,16 @@ class AppleMapController {
     });
   }
 
+  /// Updates the theme of the map.
+  ///
+  /// The returned [Future] completes after the update has been made on the
+  /// platform side.
+  Future<void> _updateTheme(ThemeMode theme) async {
+    await channel.invokeMethod<void>('map#updateTheme', <String, dynamic>{
+      'themeIndex': theme.index,
+    });
+  }
+
   /// Updates annotation configuration.
   ///
   /// Change listeners are notified once the update has been made on the

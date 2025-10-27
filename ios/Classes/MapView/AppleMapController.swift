@@ -121,16 +121,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
                     }
                     strongSelf.mapView.interpretOptions(options: options)
                     break
-                case "map#updateTheme":
-                    guard let themeIndex = args["themeIndex"] as? Int else {
-                        result(FlutterError(code: "INVALID_ARGUMENT", message: "themeIndex is required", details: nil))
-                        return
-                    }
-                    if #available(iOS 13.0, *) {
-                        strongSelf.mapView.applyTheme(themeIndex)
-                    }
-                    result(nil)
-                    break
                 case "camera#animate":
                     strongSelf.animateCamera(args: args)
                     result(nil)

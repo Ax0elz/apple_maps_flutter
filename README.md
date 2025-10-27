@@ -45,7 +45,6 @@ class AppleMapsExample extends StatelessWidget {
               initialCameraPosition: const CameraPosition(
                 target: LatLng(0.0, 0.0),
               ),
-              mapTheme: ThemeMode.system, // Follow system theme (light/dark)
             ),
           ),
         ),
@@ -117,36 +116,5 @@ class AppleMapsExample extends StatelessWidget {
   }
 }
 ```
-
-## Theme Support
-
-The plugin supports light and dark themes that automatically follow your Flutter app's theme:
-
-```dart
-AppleMap(
-  initialCameraPosition: const CameraPosition(
-    target: LatLng(37.7749, -122.4194), // San Francisco
-    zoom: 12,
-  ),
-  mapTheme: ThemeMode.system, // Follows system theme (default)
-  // mapTheme: ThemeMode.light, // Force light theme
-  // mapTheme: ThemeMode.dark,  // Force dark theme
-)
-```
-
-You can also change the theme programmatically:
-
-```dart
-// Get the controller from onMapCreated callback
-AppleMapController controller;
-
-// Change theme dynamically
-await controller.updateTheme(ThemeMode.dark);
-```
-
-The map will automatically update when:
-- The system theme changes (when using `ThemeMode.system`)
-- The Flutter app theme changes
-- You programmatically call `updateTheme()`
 
 Suggestions and PR's to make this plugin better are always welcome.

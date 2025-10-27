@@ -145,16 +145,6 @@ class AppleMapController {
     await channel.invokeMethod<void>('circles#update', circleUpdates._toMap());
   }
 
-  /// Updates the map theme.
-  ///
-  /// The returned [Future] completes after the theme has been updated on the
-  /// platform side.
-  Future<void> _updateTheme(ThemeMode theme) async {
-    await channel.invokeMethod<void>('map#updateTheme', <String, dynamic>{
-      'themeIndex': theme.index,
-    });
-  }
-
   /// Starts an animated change of the map camera position.
   ///
   /// The returned [Future] completes after the change has been started on the
@@ -227,8 +217,8 @@ class AppleMapController {
 
   /// Return [LatLngBounds] defining the region that is visible in a map.
   Future<LatLngBounds> getVisibleRegion() async {
-    final Map<String, dynamic>? latLngBounds =
-        await channel.invokeMapMethod<String, dynamic>('map#getVisibleRegion');
+    final Map<String, dynamic>? latLngBounds = await channel
+        .invokeMapMethod<String, dynamic>('map#getVisibleRegion');
     final LatLng southwest = LatLng._fromJson(latLngBounds?['southwest'])!;
     final LatLng northeast = LatLng._fromJson(latLngBounds?['northeast'])!;
 
@@ -260,13 +250,5 @@ class AppleMapController {
       'map#takeSnapshot',
       snapshotOptions._toMap(),
     );
-  }
-
-  /// Updates the map theme.
-  ///
-  /// The returned [Future] completes after the theme has been updated on the
-  /// platform side.
-  Future<void> updateTheme(ThemeMode theme) {
-    return _updateTheme(theme);
   }
 }

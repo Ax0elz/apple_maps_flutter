@@ -103,6 +103,22 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
         }
         oldBounds = self.bounds
     }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+
+        // Handle theme changes when the system appearance changes
+        if #available(iOS 13.0, *) {
+            if traitCollection.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
+                // Only update if we're using system theme (theme index 0)
+                if let options = self.options,
+                   let mapThemeIndex = options["mapTheme"] as? Int,
+                   mapThemeIndex == 0 { // system theme
+                    applyTheme(mapThemeIndex)
+                }
+            }
+        }
+    }
     
     
     override func didMoveToSuperview() {
@@ -245,8 +261,50 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
                 }
             }
         }
+
+        if let mapThemeIndex = options["mapTheme"] as? Int {
+            if #available(iOS 13.0, *) {
+                self.applyTheme(mapThemeIndex)
+            }
+        }
     }
-    
+
+    @available(iOS 13.0, *)
+    func applyTheme(_ themeIndex: Int) {
+        // Map the theme index to the ThemeMode enum values
+        // 0: system, 1: light, 2: dark (same as Flutter's ThemeMode)
+        switch themeIndex {
+        case 0: // system
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                let userInterfaceStyle = windowScene.traitCollection.userInterfaceStyle
+                configureMapAppearance(for: userInterfaceStyle == .dark ? .dark : .light)
+            } else {
+                configureMapAppearance(for: .light)
+            }
+        case 1: // light
+            configureMapAppearance(for: .light)
+        case 2: // dark
+            configureMapAppearance(for: .dark)
+        default:
+            configureMapAppearance(for: .light)
+        }
+    }
+
+    @available(iOS 13.0, *)
+    func configureMapAppearance(for style: UIUserInterfaceStyle) {
+        // Configure map appearance based on the style
+        switch style {
+        case .light:
+            // Configure for light mode
+            self.overrideUserInterfaceStyle = .light
+        case .dark:
+            // Configure for dark mode
+            self.overrideUserInterfaceStyle = .dark
+        @unknown default:
+            break
+        }
+    }
+
     func setUserLocation() {
         let authorizationStatus: CLAuthorizationStatus
         if #available(iOS 14.0, *) {

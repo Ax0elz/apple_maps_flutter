@@ -23,6 +23,7 @@ class AppleMap extends StatefulWidget {
     this.compassEnabled = true,
     this.trafficEnabled = false,
     this.mapType = MapType.standard,
+    this.mapTheme = ThemeMode.system,
     this.minMaxZoomPreference = MinMaxZoomPreference.unbounded,
     this.trackingMode = TrackingMode.none,
     this.rotateGesturesEnabled = true,
@@ -59,6 +60,9 @@ class AppleMap extends StatefulWidget {
 
   /// Type of map tiles to be rendered.
   final MapType mapType;
+
+  /// Theme preference for the map.
+  final ThemeMode mapTheme;
 
   /// The mode used to track the user location.
   final TrackingMode trackingMode;
@@ -242,6 +246,12 @@ class _AppleMapState extends State<AppleMap> {
     }
     final AppleMapController controller = await _controller.future;
     controller._updateMapOptions(updates);
+
+    // Update theme separately if it changed
+    if (newOptions.mapTheme != _appleMapOptions.mapTheme) {
+      controller._updateTheme(newOptions.mapTheme!);
+    }
+
     _appleMapOptions = newOptions;
   }
 
@@ -342,6 +352,7 @@ class _AppleMapOptions {
     this.compassEnabled,
     this.trafficEnabled,
     this.mapType,
+    this.mapTheme,
     this.minMaxZoomPreference,
     this.rotateGesturesEnabled,
     this.scrollGesturesEnabled,
@@ -360,6 +371,7 @@ class _AppleMapOptions {
       compassEnabled: map.compassEnabled,
       trafficEnabled: map.trafficEnabled,
       mapType: map.mapType,
+      mapTheme: map.mapTheme,
       minMaxZoomPreference: map.minMaxZoomPreference,
       rotateGesturesEnabled: map.rotateGesturesEnabled,
       scrollGesturesEnabled: map.scrollGesturesEnabled,
@@ -379,6 +391,8 @@ class _AppleMapOptions {
   final bool? trafficEnabled;
 
   final MapType? mapType;
+
+  final ThemeMode? mapTheme;
 
   final MinMaxZoomPreference? minMaxZoomPreference;
 
@@ -414,6 +428,7 @@ class _AppleMapOptions {
     addIfNonNull('compassEnabled', compassEnabled);
     addIfNonNull('trafficEnabled', trafficEnabled);
     addIfNonNull('mapType', mapType?.index);
+    addIfNonNull('mapTheme', mapTheme?.index);
     addIfNonNull('minMaxZoomPreference', minMaxZoomPreference?._toJson());
     addIfNonNull('rotateGesturesEnabled', rotateGesturesEnabled);
     addIfNonNull('scrollGesturesEnabled', scrollGesturesEnabled);
@@ -434,9 +449,10 @@ class _AppleMapOptions {
   Map<String, dynamic> updatesMap(_AppleMapOptions newOptions) {
     final Map<String, dynamic> prevOptionsMap = toMap();
 
-    return newOptions.toMap()..removeWhere(
-      (String key, dynamic value) => prevOptionsMap[key] == value,
-    );
+    return newOptions.toMap()
+      ..removeWhere(
+        (String key, dynamic value) => prevOptionsMap[key] == value,
+      );
   }
 
   List<double>? _serializePadding(EdgeInsets? insets) {

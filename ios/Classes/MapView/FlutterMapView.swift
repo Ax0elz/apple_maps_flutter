@@ -320,7 +320,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             // Force a map reload by temporarily changing zoom level
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let currentCenter = self.centerCoordinate
-                let currentZoom = self.getZoomLevel()
+                let currentZoom = self.calculatedZoomLevel
                 self.setCenterCoordinate(currentCenter, zoomLevel: currentZoom, animated: false)
             }
         }

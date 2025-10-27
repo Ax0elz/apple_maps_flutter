@@ -321,7 +321,7 @@ class FlutterMapView: MKMapView, UIGestureRecognizerDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let currentCenter = self.centerCoordinate
                 let currentZoom = self.calculatedZoomLevel
-                self.setCenterCoordinate(currentCenter, zoomLevel: currentZoom, animated: false)
+                self.setCenterCoordinateWithAltitude(centerCoordinate: currentCenter, zoomLevel: currentZoom, animated: false)
             }
         }
     }

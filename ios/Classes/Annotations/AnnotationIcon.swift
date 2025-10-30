@@ -41,12 +41,15 @@ class AnnotationIcon: Equatable {
     }
     
     public init(fromBytes bytes: FlutterStandardTypedData, id: String, desaturated: Bool = false) {
-        let screenScale = UIScreen.main.scale
-        let image = UIImage.init(data: bytes.data, scale: screenScale)
-        self.desaturated = desaturated
-        self.image = desaturated ? self.desaturateImage(image) : image
+        // Initialize all stored properties first
         self.iconType = .CUSTOM_FROM_BYTES
         self.id = id
+        self.desaturated = desaturated
+        
+        // Now we can call instance methods on self
+        let screenScale = UIScreen.main.scale
+        let image = UIImage.init(data: bytes.data, scale: screenScale)
+        self.image = desaturated ? self.desaturateImage(image) : image
     }
     
     public convenience init() {

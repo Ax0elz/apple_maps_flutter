@@ -11,6 +11,152 @@ dynamic _offsetToJson(Offset? offset) {
   return <dynamic>[offset.dx, offset.dy];
 }
 
+dynamic _colorToJson(Color? color) {
+  if (color == null) {
+    return null;
+  }
+  return color.value;
+}
+
+/// Shape of the badge background.
+enum BadgeShape {
+  /// Circular badge shape.
+  circle,
+
+  /// Square badge shape with rounded corners.
+  square,
+}
+
+String _badgeShapeToString(BadgeShape shape) {
+  switch (shape) {
+    case BadgeShape.circle:
+      return 'circle';
+    case BadgeShape.square:
+      return 'square';
+  }
+}
+
+/// Options for configuring a badge icon displayed above an annotation.
+///
+/// Badges are useful for indicating status (e.g., AI-generated, invalid, recent activity).
+class BadgeOptions {
+  const BadgeOptions({
+    required this.systemImageName,
+    this.offset = const Offset(0.7, -0.3),
+    this.sizeRatio = 0.3,
+    this.alpha = 1.0,
+    this.backgroundColor,
+    this.shape = BadgeShape.circle,
+  })  : assert(0.0 <= alpha && alpha <= 1.0),
+        assert(0.0 < sizeRatio && sizeRatio <= 1.0);
+
+  /// SF Symbol name for the badge icon.
+  ///
+  /// Must be a valid SF Symbol name available on iOS.
+  /// Examples: 'sparkles', 'xmark', 'clock', 'star.fill'
+  final String systemImageName;
+
+  /// Position offset of the badge relative to the annotation.
+  ///
+  /// The offset is specified in normalized coordinates where:
+  /// - (0.0, 0.0) is the top-left corner of the annotation
+  /// - (1.0, 1.0) is the bottom-right corner of the annotation
+  /// - Negative Y values position the badge above the annotation
+  ///
+  /// Default is (0.7, -0.3) which places the badge at the top-right.
+  final Offset offset;
+
+  /// Size of the badge as a ratio of the annotation size.
+  ///
+  /// Must be between 0.0 (exclusive) and 1.0 (inclusive).
+  /// For example, 0.3 means the badge will be 30% of the annotation size.
+  final double sizeRatio;
+
+  /// Opacity of the badge, between 0.0 and 1.0 inclusive.
+  ///
+  /// 0.0 means fully transparent, 1.0 means fully opaque.
+  final double alpha;
+
+  /// Background color of the badge.
+  ///
+  /// If null, defaults to white background.
+  final Color? backgroundColor;
+
+  /// Shape of the badge background.
+  ///
+  /// Can be either [BadgeShape.circle] or [BadgeShape.square].
+  final BadgeShape shape;
+
+  /// Creates a new [BadgeOptions] object whose values are the same as this instance,
+  /// unless overwritten by the specified parameters.
+  BadgeOptions copyWith({
+    String? systemImageNameParam,
+    Offset? offsetParam,
+    double? sizeRatioParam,
+    double? alphaParam,
+    Color? backgroundColorParam,
+    BadgeShape? shapeParam,
+  }) {
+    return BadgeOptions(
+      systemImageName: systemImageNameParam ?? systemImageName,
+      offset: offsetParam ?? offset,
+      sizeRatio: sizeRatioParam ?? sizeRatio,
+      alpha: alphaParam ?? alpha,
+      backgroundColor: backgroundColorParam ?? backgroundColor,
+      shape: shapeParam ?? shape,
+    );
+  }
+
+  dynamic _toJson() {
+    final Map<String, dynamic> json = <String, dynamic>{};
+
+    void addIfPresent(String fieldName, dynamic value) {
+      if (value != null) {
+        json[fieldName] = value;
+      }
+    }
+
+    addIfPresent('systemImageName', systemImageName);
+    addIfPresent('offset', _offsetToJson(offset));
+    addIfPresent('sizeRatio', sizeRatio);
+    addIfPresent('alpha', alpha);
+    addIfPresent('backgroundColor', _colorToJson(backgroundColor));
+    addIfPresent('shape', _badgeShapeToString(shape));
+
+    return json;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! BadgeOptions) return false;
+    final BadgeOptions typedOther = other;
+    return systemImageName == typedOther.systemImageName &&
+        offset == typedOther.offset &&
+        sizeRatio == typedOther.sizeRatio &&
+        alpha == typedOther.alpha &&
+        backgroundColor == typedOther.backgroundColor &&
+        shape == typedOther.shape;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        systemImageName,
+        offset,
+        sizeRatio,
+        alpha,
+        backgroundColor,
+        shape,
+      );
+
+  @override
+  String toString() {
+    return 'BadgeOptions{systemImageName: $systemImageName, offset: $offset, '
+        'sizeRatio: $sizeRatio, alpha: $alpha, backgroundColor: $backgroundColor, '
+        'shape: $shape}';
+  }
+}
+
 /// Text labels for a [Annotation] info window.
 class InfoWindow {
   const InfoWindow({
@@ -157,6 +303,7 @@ class Annotation {
     this.onDragEnd,
     this.systemImageName,
     this.desaturated = false,
+    this.badge,
   }) : assert(0.0 <= alpha && alpha <= 1.0);
 
   /// Uniquely identifies a [Annotation].
@@ -205,6 +352,13 @@ class Annotation {
   /// This is more visually distinctive than using [alpha] alone.
   final bool desaturated;
 
+  /// Optional badge icon displayed above the annotation.
+  ///
+  /// Badges are useful for indicating status such as AI-generated content,
+  /// invalid markers, recent activity, or any other visual indicator.
+  /// When null, no badge is displayed.
+  final BadgeOptions? badge;
+
   /// The z-index of the annotation, used to determine relative drawing order of
   /// map overlays.
   ///
@@ -228,6 +382,7 @@ class Annotation {
     ValueChanged<LatLng>? onDragEndParam,
     String? systemImageNameParam,
     bool? desaturatedParam,
+    BadgeOptions? badgeParam,
   }) {
     return Annotation(
       annotationId: annotationId,
@@ -243,6 +398,7 @@ class Annotation {
       onDragEnd: onDragEndParam ?? onDragEnd,
       systemImageName: systemImageNameParam ?? systemImageName,
       desaturated: desaturatedParam ?? desaturated,
+      badge: badgeParam ?? badge,
     );
   }
 
@@ -266,6 +422,7 @@ class Annotation {
     addIfPresent('zIndex', zIndex);
     addIfPresent('systemImageName', systemImageName);
     addIfPresent('desaturated', desaturated);
+    addIfPresent('badge', badge?._toJson());
     return json;
   }
 
@@ -284,6 +441,7 @@ class Annotation {
         visible == typedOther.visible &&
         systemImageName == typedOther.systemImageName &&
         desaturated == typedOther.desaturated &&
+        badge == typedOther.badge &&
         zIndex == typedOther.zIndex;
   }
 
@@ -294,7 +452,7 @@ class Annotation {
   String toString() {
     return 'Annotation{annotationId: $annotationId, alpha: $alpha, draggable: $draggable, '
         'icon: $icon, infoWindow: $infoWindow, position: $position ,visible: $visible, '
-        'onTap: $onTap}, zIndex: $zIndex, onTap: $onTap, onDragEnd: $onDragEnd, systemImageName: $systemImageName, desaturated: $desaturated}';
+        'onTap: $onTap}, zIndex: $zIndex, onTap: $onTap, onDragEnd: $onDragEnd, systemImageName: $systemImageName, desaturated: $desaturated, badge: $badge}';
   }
 }
 

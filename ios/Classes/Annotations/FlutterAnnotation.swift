@@ -27,6 +27,14 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     var icon: AnnotationIcon = AnnotationIcon.init()
     var selectedProgrammatically: Bool = false
     
+    // Badge properties
+    var badgeSystemImageName: String?
+    var badgeOffset: Offset = Offset(x: 0.7, y: -0.3)
+    var badgeSizeRatio: Double = 0.3
+    var badgeAlpha: Double = 1.0
+    var badgeBackgroundColor: UIColor?
+    var badgeShape: String = "circle"
+    
     public init(fromDictionary annotationData: Dictionary<String, Any>, registrar: FlutterPluginRegistrar) {
         guard let position = annotationData["position"] as? Array<Double>,
               let infoWindow = annotationData["infoWindow"] as? Dictionary<String, Any> else {
@@ -72,6 +80,31 @@ class FlutterAnnotation: NSObject, MKAnnotation {
         if let calloutOffsetJSON = infoWindow["anchor"] as? Array<Double> {
             self.calloutOffset = Offset(from: calloutOffsetJSON)
         }
+        
+        // Parse badge properties if present
+        if let badgeData = annotationData["badge"] as? Dictionary<String, Any> {
+            self.badgeSystemImageName = badgeData["systemImageName"] as? String
+            
+            if let offsetJSON = badgeData["offset"] as? Array<Double> {
+                self.badgeOffset = Offset(from: offsetJSON)
+            }
+            
+            if let sizeRatio = badgeData["sizeRatio"] as? Double {
+                self.badgeSizeRatio = sizeRatio
+            }
+            
+            if let alpha = badgeData["alpha"] as? Double {
+                self.badgeAlpha = alpha
+            }
+            
+            if let colorValue = badgeData["backgroundColor"] as? Int {
+                self.badgeBackgroundColor = UIColor(rgb: colorValue)
+            }
+            
+            if let shape = badgeData["shape"] as? String {
+                self.badgeShape = shape
+            }
+        }
     }
     
     
@@ -109,7 +142,7 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     }
     
     static func == (lhs: FlutterAnnotation, rhs: FlutterAnnotation) -> Bool {
-        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.subtitle == rhs.subtitle && lhs.image == rhs.image && lhs.alpha == rhs.alpha && lhs.isDraggable == rhs.isDraggable && lhs.wasDragged == rhs.wasDragged && lhs.isVisible == rhs.isVisible && lhs.desaturated == rhs.desaturated && lhs.icon == rhs.icon && lhs.coordinate.latitude == rhs.coordinate.latitude && lhs.coordinate.longitude == rhs.coordinate.longitude && lhs.infoWindowConsumesTapEvents == rhs.infoWindowConsumesTapEvents && lhs.anchor == rhs.anchor && lhs.calloutOffset == rhs.calloutOffset && lhs.zIndex == rhs.zIndex
+        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.subtitle == rhs.subtitle && lhs.image == rhs.image && lhs.alpha == rhs.alpha && lhs.isDraggable == rhs.isDraggable && lhs.wasDragged == rhs.wasDragged && lhs.isVisible == rhs.isVisible && lhs.desaturated == rhs.desaturated && lhs.icon == rhs.icon && lhs.coordinate.latitude == rhs.coordinate.latitude && lhs.coordinate.longitude == rhs.coordinate.longitude && lhs.infoWindowConsumesTapEvents == rhs.infoWindowConsumesTapEvents && lhs.anchor == rhs.anchor && lhs.calloutOffset == rhs.calloutOffset && lhs.zIndex == rhs.zIndex && lhs.badgeSystemImageName == rhs.badgeSystemImageName && lhs.badgeOffset == rhs.badgeOffset && lhs.badgeSizeRatio == rhs.badgeSizeRatio && lhs.badgeAlpha == rhs.badgeAlpha && lhs.badgeBackgroundColor == rhs.badgeBackgroundColor && lhs.badgeShape == rhs.badgeShape
     }
     
     static func != (lhs: FlutterAnnotation, rhs: FlutterAnnotation) -> Bool {
@@ -131,11 +164,28 @@ struct Offset {
         self.y = 0
     }
     
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+    
     static func == (lhs: Offset, rhs: Offset) -> Bool {
         return lhs.x == rhs.x && lhs.y == rhs.y
     }
     
     static func != (lhs: Offset, rhs: Offset) -> Bool {
         return !(lhs == rhs)
+    }
+}
+
+// UIColor extension to create from integer RGB value
+extension UIColor {
+    convenience init(rgb: Int) {
+        let red = CGFloat((rgb >> 16) & 0xFF) / 255.0
+        let green = CGFloat((rgb >> 8) & 0xFF) / 255.0
+        let blue = CGFloat(rgb & 0xFF) / 255.0
+        let alpha = CGFloat((rgb >> 24) & 0xFF) / 255.0
+        
+        self.init(red: red, green: green, blue: blue, alpha: alpha)
     }
 }

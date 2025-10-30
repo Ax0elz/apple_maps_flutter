@@ -307,6 +307,14 @@ extension AppleMapController: AnnotationDelegate {
                 oldAnnotation.subtitle = annotation.subtitle
                 oldAnnotation.systemImageName = annotation.systemImageName
                 oldAnnotation.desaturated = annotation.desaturated
+                
+                // Update badge properties
+                oldAnnotation.badgeSystemImageName = annotation.badgeSystemImageName
+                oldAnnotation.badgeOffset = annotation.badgeOffset
+                oldAnnotation.badgeSizeRatio = annotation.badgeSizeRatio
+                oldAnnotation.badgeAlpha = annotation.badgeAlpha
+                oldAnnotation.badgeBackgroundColor = annotation.badgeBackgroundColor
+                oldAnnotation.badgeShape = annotation.badgeShape
             })
             
             // Update the annotation view with the new appearance
@@ -322,6 +330,12 @@ extension AppleMapController: AnnotationDelegate {
                 } else {
                     // For other annotation views, update the image
                     view.image = newAnnotationView.image
+                }
+                
+                // Update or remove badge
+                removeBadgeFromAnnotationView(view)
+                if annotation.badgeSystemImageName != nil {
+                    addBadgeToAnnotationView(view, annotation: annotation)
                 }
             }
         }
@@ -364,6 +378,9 @@ extension AppleMapController: AnnotationDelegate {
             
             pinAnnotationView.pinTintColor = tintColor
         }
+        
+        // Add badge if present
+        addBadgeToAnnotationView(pinAnnotationView, annotation: annotation)
 
         return pinAnnotationView
     }
@@ -410,6 +427,9 @@ extension AppleMapController: AnnotationDelegate {
         if let tintColor = tintColor {
             markerAnnotationView.markerTintColor = tintColor
         }
+        
+        // Add badge if present
+        addBadgeToAnnotationView(markerAnnotationView, annotation: annotation)
 
         return markerAnnotationView
     }
@@ -435,6 +455,10 @@ extension AppleMapController: AnnotationDelegate {
         }
         
         annotationView.stickyZPosition = annotation.zIndex
+        
+        // Add badge if present
+        addBadgeToAnnotationView(annotationView, annotation: annotation)
+        
         return annotationView
     }
 
@@ -491,6 +515,81 @@ extension AppleMapController: AnnotationDelegate {
         }
         
         return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+    
+    // MARK: - Badge Helpers
+    
+    private static let badgeViewTag = 99999
+    
+    private func removeBadgeFromAnnotationView(_ annotationView: MKAnnotationView) {
+        if let badgeView = annotationView.viewWithTag(AppleMapController.badgeViewTag) {
+            badgeView.removeFromSuperview()
+        }
+    }
+    
+    private func addBadgeToAnnotationView(_ annotationView: MKAnnotationView, annotation: FlutterAnnotation) {
+        // Return early if no badge system image name is provided
+        guard let systemImageName = annotation.badgeSystemImageName else {
+            return
+        }
+        
+        // Remove any existing badge first
+        removeBadgeFromAnnotationView(annotationView)
+        
+        // Calculate badge size based on annotation view size and ratio
+        let annotationSize = max(annotationView.frame.size.width, annotationView.frame.size.height)
+        let badgeSize = annotationSize * CGFloat(annotation.badgeSizeRatio)
+        
+        // Create badge container view
+        let badgeContainer = UIView(frame: CGRect(x: 0, y: 0, width: badgeSize, height: badgeSize))
+        badgeContainer.tag = AppleMapController.badgeViewTag
+        badgeContainer.isUserInteractionEnabled = false
+        
+        // Set background color (default to white if not specified)
+        let backgroundColor = annotation.badgeBackgroundColor ?? .white
+        badgeContainer.backgroundColor = backgroundColor
+        
+        // Set corner radius based on badge shape
+        if annotation.badgeShape == "circle" {
+            badgeContainer.layer.cornerRadius = badgeSize / 2
+        } else {
+            badgeContainer.layer.cornerRadius = badgeSize / 5
+        }
+        badgeContainer.clipsToBounds = true
+        
+        // Set alpha
+        badgeContainer.alpha = CGFloat(annotation.badgeAlpha)
+        
+        // Create SF Symbol image
+        if let systemImage = UIImage(systemName: systemImageName) {
+            let imageView = UIImageView(image: systemImage)
+            imageView.contentMode = .scaleAspectFit
+            imageView.tintColor = .black
+            
+            // Size the icon to be about 60% of badge size for good visual balance
+            let iconSize = badgeSize * 0.6
+            let iconFrame = CGRect(
+                x: (badgeSize - iconSize) / 2,
+                y: (badgeSize - iconSize) / 2,
+                width: iconSize,
+                height: iconSize
+            )
+            imageView.frame = iconFrame
+            badgeContainer.addSubview(imageView)
+        }
+        
+        // Position badge using offset
+        // Offset is in normalized coordinates where (0,0) is top-left, (1,1) is bottom-right
+        let xPosition = annotationView.bounds.width * CGFloat(annotation.badgeOffset.x) - (badgeSize / 2)
+        let yPosition = annotationView.bounds.height * CGFloat(annotation.badgeOffset.y) - (badgeSize / 2)
+        badgeContainer.frame.origin = CGPoint(x: xPosition, y: yPosition)
+        
+        // Add border for better visibility
+        badgeContainer.layer.borderWidth = 1.0
+        badgeContainer.layer.borderColor = UIColor.black.withAlphaComponent(0.2).cgColor
+        
+        // Add the badge to the annotation view
+        annotationView.addSubview(badgeContainer)
     }
     
     private func getRegionForCluster(_ cluster: MKClusterAnnotation) -> MKCoordinateRegion {

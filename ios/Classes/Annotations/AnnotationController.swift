@@ -7,6 +7,7 @@
 
 import Foundation
 import MapKit
+import UIKit
 
 extension AppleMapController: AnnotationDelegate {
 
@@ -19,11 +20,12 @@ extension AppleMapController: AnnotationDelegate {
             
             // Check if all annotations are at the same exact location
             if allAnnotationsAtSameLocation(cluster.memberAnnotations) {
-                // If we're already zoomed in very far, just deselect and show them stacked
+                // If we're already zoomed in very far, uncluster the annotations
                 let currentZoom = self.mapView.calculatedZoomLevel
                 if currentZoom >= 19 {
-                    // Don't zoom further - just show the annotations at this location
+                    // Uncluster annotations by spreading them in a circle
                     mapView.deselectAnnotation(cluster, animated: false)
+                    unclusterAnnotationsAtSameLocation(cluster)
                     return
                 }
             }
@@ -61,7 +63,10 @@ extension AppleMapController: AnnotationDelegate {
         else if let flutterAnnotation = annotation as? FlutterAnnotation {
             let view = self.getAnnotationView(annotation: flutterAnnotation)
             if #available(iOS 11.0, *), let mapView = self.mapView as? FlutterMapView, mapView.clusteringEnabled {
-                view.clusteringIdentifier = "flutterAnnotation"
+                // Only set clustering identifier if this annotation is not manually unclustered
+                if !self.unclusteredAnnotations.contains(flutterAnnotation.id) {
+                    view.clusteringIdentifier = "flutterAnnotation"
+                }
             }
             return view
         } 
@@ -727,6 +732,112 @@ extension AppleMapController: AnnotationDelegate {
                 longitudeDelta: max(lngDelta * zoomFactor, 0.005)
             )
         )
+    }
+    
+    // MARK: - Unclustering Logic
+    
+    /// Unclusters annotations at the same location by spreading them in a circular pattern
+    private func unclusterAnnotationsAtSameLocation(_ cluster: MKClusterAnnotation) {
+        guard let firstAnnotation = cluster.memberAnnotations.first else {
+            return
+        }
+        
+        let centerCoordinate = firstAnnotation.coordinate
+        let memberCount = cluster.memberAnnotations.count
+        
+        // Store the center point for re-clustering detection
+        self.unclusterCenterPoint = centerCoordinate
+        
+        // Remove annotations from map temporarily
+        var annotationsToUpdate: [FlutterAnnotation] = []
+        for (index, member) in cluster.memberAnnotations.enumerated() {
+            guard let flutterAnnotation = member as? FlutterAnnotation else {
+                continue
+            }
+            
+            // Store original coordinate if not already stored
+            if self.originalCoordinates[flutterAnnotation.id] == nil {
+                self.originalCoordinates[flutterAnnotation.id] = centerCoordinate
+            }
+            
+            // Mark as unclustered
+            self.unclusteredAnnotations.insert(flutterAnnotation.id)
+            
+            // Calculate new offset coordinate
+            let newCoordinate = calculateOffsetCoordinate(
+                center: centerCoordinate,
+                index: index,
+                total: memberCount
+            )
+            
+            // Update the annotation's coordinate
+            flutterAnnotation.coordinate = newCoordinate
+            annotationsToUpdate.append(flutterAnnotation)
+        }
+        
+        // Remove all annotations from the map
+        self.mapView.removeAnnotations(annotationsToUpdate)
+        
+        // Re-add them with new coordinates (they won't have clustering identifiers)
+        self.mapView.addAnnotations(annotationsToUpdate)
+    }
+    
+    /// Calculates an offset coordinate for spreading annotations in a circle
+    private func calculateOffsetCoordinate(center: CLLocationCoordinate2D, index: Int, total: Int) -> CLLocationCoordinate2D {
+        // Radius in meters - adjust based on zoom level for visual clarity
+        let currentZoom = self.mapView.calculatedZoomLevel
+        let radiusMeters: Double
+        if currentZoom >= 20 {
+            radiusMeters = 10.0
+        } else if currentZoom >= 19 {
+            radiusMeters = 15.0
+        } else {
+            radiusMeters = 20.0
+        }
+        
+        // Calculate angle for this annotation (evenly distributed around circle)
+        let angleRadians = (2.0 * .pi * Double(index)) / Double(total)
+        
+        // Convert radius from meters to degrees (approximate)
+        // At the equator, 1 degree of latitude ≈ 111,320 meters
+        let latitudeOffset = (radiusMeters * cos(angleRadians)) / 111320.0
+        let longitudeOffset = (radiusMeters * sin(angleRadians)) / (111320.0 * cos(center.latitude * .pi / 180.0))
+        
+        return CLLocationCoordinate2D(
+            latitude: center.latitude + latitudeOffset,
+            longitude: center.longitude + longitudeOffset
+        )
+    }
+    
+    /// Re-clusters annotations by restoring their original coordinates
+    func reclusterAnnotations() {
+        guard !self.unclusteredAnnotations.isEmpty else {
+            return
+        }
+        
+        var annotationsToUpdate: [FlutterAnnotation] = []
+        
+        // Find all unclustered annotations and restore their original coordinates
+        for annotation in self.mapView.annotations {
+            guard let flutterAnnotation = annotation as? FlutterAnnotation,
+                  self.unclusteredAnnotations.contains(flutterAnnotation.id),
+                  let originalCoordinate = self.originalCoordinates[flutterAnnotation.id] else {
+                continue
+            }
+            
+            // Restore original coordinate
+            flutterAnnotation.coordinate = originalCoordinate
+            annotationsToUpdate.append(flutterAnnotation)
+        }
+        
+        // Clear unclustered state
+        self.unclusteredAnnotations.removeAll()
+        self.originalCoordinates.removeAll()
+        self.unclusterCenterPoint = nil
+        
+        // Remove and re-add annotations to trigger clustering
+        self.mapView.removeAnnotations(annotationsToUpdate)
+        self.mapView.addAnnotations(annotationsToUpdate)
     }
 }
 

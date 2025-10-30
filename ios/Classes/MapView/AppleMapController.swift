@@ -20,6 +20,11 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     var currentlySelectedAnnotation: String?
     var snapShotOptions: MKMapSnapshotter.Options = MKMapSnapshotter.Options()
     var snapShot: MKMapSnapshotter?
+    
+    // State tracking for unclustered annotations
+    var unclusteredAnnotations: Set<String> = []
+    var originalCoordinates: [String: CLLocationCoordinate2D] = [:]
+    var unclusterCenterPoint: CLLocationCoordinate2D?
 
     deinit {
         // Cancel any ongoing snapshot operations to prevent memory leaks
@@ -349,7 +354,39 @@ extension AppleMapController: MKMapViewDelegate {
                 let locationOnMap = self.mapView.region.center
                 self.channel.invokeMethod("camera#onMove", arguments: ["position": ["heading": self.mapView.actualHeading, "target":  [locationOnMap.latitude, locationOnMap.longitude], "pitch": self.mapView.camera.pitch, "zoom": self.mapView.calculatedZoomLevel]])
             }
+            
+            // Check if we should re-cluster annotations
+            self.checkForReclustering()
+            
             self.channel.invokeMethod("camera#onIdle", arguments: "")
+        }
+    }
+    
+    /// Checks if unclustered annotations should be re-clustered based on zoom/pan changes
+    private func checkForReclustering() {
+        guard !self.unclusteredAnnotations.isEmpty,
+              let unclusterCenter = self.unclusterCenterPoint else {
+            return
+        }
+        
+        let currentZoom = self.mapView.calculatedZoomLevel
+        let currentCenter = self.mapView.region.center
+        
+        // Re-cluster if zoom level drops below 17
+        if currentZoom < 17 {
+            self.reclusterAnnotations()
+            return
+        }
+        
+        // Re-cluster if user panned away from the unclustered location
+        // Calculate distance from uncluster center
+        let latDiff = abs(currentCenter.latitude - unclusterCenter.latitude)
+        let lngDiff = abs(currentCenter.longitude - unclusterCenter.longitude)
+        
+        // If moved more than 0.01 degrees (~1km), re-cluster
+        if latDiff > 0.01 || lngDiff > 0.01 {
+            self.reclusterAnnotations()
+            return
         }
     }
 

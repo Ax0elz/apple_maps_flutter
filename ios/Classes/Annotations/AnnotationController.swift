@@ -16,6 +16,17 @@ extension AppleMapController: AnnotationDelegate {
             guard !cluster.memberAnnotations.isEmpty else {
                 return
             }
+            
+            // Check if all annotations are at the same exact location
+            if allAnnotationsAtSameLocation(cluster.memberAnnotations) {
+                // If we're already zoomed in very far, just deselect and show them stacked
+                let currentZoom = self.mapView.calculatedZoomLevel
+                if currentZoom >= 19 {
+                    // Don't zoom further - just show the annotations at this location
+                    mapView.deselectAnnotation(cluster, animated: false)
+                    return
+                }
+            }
 
             let region = self.getRegionForCluster(cluster)
             mapView.setRegion(region, animated: true)
@@ -121,7 +132,12 @@ extension AppleMapController: AnnotationDelegate {
         let identifier = "flutterAnnotation"  // Use consistent identifier for clustering
         var annotationView = self.mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
         let oldflutterAnnoation = annotationView?.annotation as? FlutterAnnotation
-        if annotationView == nil || oldflutterAnnoation?.icon.iconType != annotation.icon.iconType {
+        // Force recreation if icon type changed OR if desaturation changed
+        let needsRecreation = annotationView == nil || 
+                              oldflutterAnnoation?.icon.iconType != annotation.icon.iconType ||
+                              oldflutterAnnoation?.desaturated != annotation.desaturated
+        
+        if needsRecreation {
             if #available(iOS 11.0, *), annotation.icon.iconType == IconType.MARKER {
                 annotationView = getMarkerAnnotationView(annotation: annotation, id: identifier)
             } else if annotation.icon.iconType == .CUSTOM_FROM_ASSET || annotation.icon.iconType == .CUSTOM_FROM_BYTES {
@@ -319,23 +335,31 @@ extension AppleMapController: AnnotationDelegate {
             
             // Update the annotation view with the new appearance
             if let view = self.mapView.view(for: oldAnnotation) {
-                let newAnnotationView = getAnnotationView(annotation: annotation)
-
-                // For marker annotation views, we need to update the specific properties
-                if #available(iOS 11.0, *), let markerView = view as? MKMarkerAnnotationView,
-                   let newMarkerView = newAnnotationView as? MKMarkerAnnotationView {
-                    // Update marker-specific properties
-                    markerView.markerTintColor = newMarkerView.markerTintColor
-                    markerView.glyphImage = newMarkerView.glyphImage
+                // If desaturation changed, we need to recreate the entire view
+                let desaturationChanged = oldAnnotation.desaturated != annotation.desaturated
+                if desaturationChanged {
+                    // Remove old view and add new one
+                    self.mapView.removeAnnotation(oldAnnotation)
+                    self.mapView.addAnnotation(annotation)
                 } else {
-                    // For other annotation views, update the image
-                    view.image = newAnnotationView.image
-                }
-                
-                // Update or remove badge
-                removeBadgeFromAnnotationView(view)
-                if annotation.badgeSystemImageName != nil {
-                    addBadgeToAnnotationView(view, annotation: annotation)
+                    let newAnnotationView = getAnnotationView(annotation: annotation)
+
+                    // For marker annotation views, we need to update the specific properties
+                    if #available(iOS 11.0, *), let markerView = view as? MKMarkerAnnotationView,
+                       let newMarkerView = newAnnotationView as? MKMarkerAnnotationView {
+                        // Update marker-specific properties
+                        markerView.markerTintColor = newMarkerView.markerTintColor
+                        markerView.glyphImage = newMarkerView.glyphImage
+                    } else {
+                        // For other annotation views, update the image
+                        view.image = newAnnotationView.image
+                    }
+                    
+                    // Update or remove badge
+                    removeBadgeFromAnnotationView(view)
+                    if annotation.badgeSystemImageName != nil {
+                        addBadgeToAnnotationView(view, annotation: annotation)
+                    }
                 }
             }
         }
@@ -481,6 +505,22 @@ extension AppleMapController: AnnotationDelegate {
         self.selectAnnotation(with: id)
     }
 
+    // MARK: - Helper Methods
+    
+    private func allAnnotationsAtSameLocation(_ annotations: [MKAnnotation]) -> Bool {
+        guard let firstCoord = annotations.first?.coordinate else { return false }
+        
+        for annotation in annotations.dropFirst() {
+            let coord = annotation.coordinate
+            // Check if coordinates are essentially the same (within a very small threshold)
+            if abs(coord.latitude - firstCoord.latitude) > 0.0000001 || 
+               abs(coord.longitude - firstCoord.longitude) > 0.0000001 {
+                return false
+            }
+        }
+        return true
+    }
+    
     // MARK: - Desaturation Helpers
     
     private func desaturateColor(_ color: UIColor) -> UIColor {
@@ -637,21 +677,26 @@ extension AppleMapController: AnnotationDelegate {
 
         // Handle case where all coordinates are the same (single point)
         if minLat == maxLat && minLng == maxLng {
-            // Check current zoom level to force unclustering when zoomed in
+            // Get current zoom and zoom in further each time
             let currentZoom = self.mapView.calculatedZoomLevel
             
-            // If already zoomed in significantly (>= 18), force maximum zoom to uncluster
-            if currentZoom >= 18 {
-                return MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: minLat, longitude: minLng),
-                    span: MKCoordinateSpan(latitudeDelta: 0.0001, longitudeDelta: 0.0001)
-                )
+            // Keep zooming in with progressively smaller spans
+            // This will eventually reach MapKit's limit and stop clustering
+            let targetSpan: Double
+            if currentZoom < 15 {
+                targetSpan = 0.01
+            } else if currentZoom < 17 {
+                targetSpan = 0.001
+            } else if currentZoom < 19 {
+                targetSpan = 0.0001
+            } else {
+                // At very high zoom, use the smallest possible span
+                targetSpan = 0.00001
             }
             
-            // Otherwise, zoom in progressively
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: minLat, longitude: minLng),
-                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                span: MKCoordinateSpan(latitudeDelta: targetSpan, longitudeDelta: targetSpan)
             )
         }
 

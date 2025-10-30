@@ -61,18 +61,19 @@ class FlutterAnnotation: NSObject, MKAnnotation {
             self.systemImageName = systemImageName
         }
         
-        if let desaturated = annotationData["desaturated"] as? Bool {
-            self.desaturated = desaturated
-        }
-        
         if let alpha: Double = annotationData["alpha"] as? Double {
             self.alpha = alpha
+        }
+        
+        if let desaturated = annotationData["desaturated"] as? Bool {
+            self.desaturated = desaturated
         }
         
         if let anchorJSON: Array<Double> = annotationData["anchor"] as? Array<Double> {
             self.anchor = Offset(from: anchorJSON)
         }
         
+        // Parse icon AFTER desaturated is set so it can be passed correctly
         if let iconData: Array<Any> = annotationData["icon"] as? Array<Any> {
             self.icon = FlutterAnnotation.getAnnotationIcon(iconData: iconData, registrar: registrar, annotationId: id, desaturated: self.desaturated)
         }

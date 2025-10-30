@@ -17,6 +17,7 @@ class AnnotationIcon: Equatable {
     var id: String
     var image: UIImage?
     var hueColor: Double?
+    var desaturated: Bool = false
     
     public init(id: String, iconType: IconType) {
         self.iconType = iconType
@@ -29,18 +30,21 @@ class AnnotationIcon: Equatable {
         self.hueColor = hueColor
     }
     
-    public init(withAsset name: String, id: String, iconScale: CGFloat? = 1.0) {
+    public init(withAsset name: String, id: String, iconScale: CGFloat? = 1.0, desaturated: Bool = false) {
         self.iconType = .CUSTOM_FROM_ASSET
         self.id = id
+        self.desaturated = desaturated
         if let uiImage: UIImage =  UIImage.init(named: name) {
-            self.image = self.scaleImage(image: uiImage, scale: iconScale!)
+            let scaledImage = self.scaleImage(image: uiImage, scale: iconScale!)
+            self.image = desaturated ? self.desaturateImage(scaledImage) : scaledImage
         }
     }
     
-    public init(fromBytes bytes: FlutterStandardTypedData, id: String) {
+    public init(fromBytes bytes: FlutterStandardTypedData, id: String, desaturated: Bool = false) {
         let screenScale = UIScreen.main.scale
         let image = UIImage.init(data: bytes.data, scale: screenScale)
-        self.image = image
+        self.desaturated = desaturated
+        self.image = desaturated ? self.desaturateImage(image) : image
         self.iconType = .CUSTOM_FROM_BYTES
         self.id = id
     }
@@ -58,6 +62,27 @@ class AnnotationIcon: Equatable {
             return image
         }
         return UIImage.init(cgImage: cgImage, scale: 4.0, orientation: image.imageOrientation)
+    }
+    
+    private func desaturateImage(_ image: UIImage?) -> UIImage? {
+        guard let image = image, let ciImage = CIImage(image: image) else {
+            return image
+        }
+        
+        // Apply grayscale filter
+        let filter = CIFilter(name: "CIPhotoEffectMono")
+        filter?.setValue(ciImage, forKey: kCIInputImageKey)
+        
+        guard let outputImage = filter?.outputImage else {
+            return image
+        }
+        
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(outputImage, from: outputImage.extent) else {
+            return image
+        }
+        
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
     }
     
     static func == (lhs: AnnotationIcon, rhs: AnnotationIcon) -> Bool {

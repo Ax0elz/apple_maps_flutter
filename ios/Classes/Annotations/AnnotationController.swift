@@ -306,6 +306,7 @@ extension AppleMapController: AnnotationDelegate {
                 oldAnnotation.title = annotation.title
                 oldAnnotation.subtitle = annotation.subtitle
                 oldAnnotation.systemImageName = annotation.systemImageName
+                oldAnnotation.desaturated = annotation.desaturated
             })
             
             // Update the annotation view with the new appearance
@@ -354,7 +355,14 @@ extension AppleMapController: AnnotationDelegate {
 
         if let hueColor: Double = annotation.icon.hueColor {
             let alpha = annotation.alpha ?? 1.0
-            pinAnnotationView.pinTintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: alpha)
+            var tintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: alpha)
+            
+            // Apply desaturation if needed
+            if annotation.desaturated {
+                tintColor = desaturateColor(tintColor)
+            }
+            
+            pinAnnotationView.pinTintColor = tintColor
         }
 
         return pinAnnotationView
@@ -378,6 +386,11 @@ extension AppleMapController: AnnotationDelegate {
         if let hueColor: Double = annotation.icon.hueColor {
             let alpha = annotation.alpha ?? 1.0
             tintColor = UIColor.init(hue: hueColor, saturation: 1, brightness: 1, alpha: alpha)
+            
+            // Apply desaturation if needed
+            if annotation.desaturated {
+                tintColor = desaturateColor(tintColor!)
+            }
         }
 
         if let systemImageName = annotation.systemImageName {
@@ -413,7 +426,14 @@ extension AppleMapController: AnnotationDelegate {
         } else {
             annotationView = FlutterAnnotationView(annotation: annotation, reuseIdentifier: id)
         }
-        annotationView.image = annotation.icon.image
+        
+        // Apply desaturation to custom image if needed
+        if annotation.desaturated {
+            annotationView.image = desaturateImage(annotation.icon.image)
+        } else {
+            annotationView.image = annotation.icon.image
+        }
+        
         annotationView.stickyZPosition = annotation.zIndex
         return annotationView
     }
@@ -437,6 +457,42 @@ extension AppleMapController: AnnotationDelegate {
         self.selectAnnotation(with: id)
     }
 
+    // MARK: - Desaturation Helpers
+    
+    private func desaturateColor(_ color: UIColor) -> UIColor {
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        // Get HSB values
+        color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        
+        // Return grayscale version (saturation = 0)
+        return UIColor(hue: hue, saturation: 0, brightness: brightness, alpha: alpha)
+    }
+    
+    private func desaturateImage(_ image: UIImage?) -> UIImage? {
+        guard let image = image, let ciImage = CIImage(image: image) else {
+            return image
+        }
+        
+        // Apply grayscale filter
+        let filter = CIFilter(name: "CIPhotoEffectMono")
+        filter?.setValue(ciImage, forKey: kCIInputImageKey)
+        
+        guard let outputImage = filter?.outputImage else {
+            return image
+        }
+        
+        let context = CIContext(options: nil)
+        guard let cgImage = context.createCGImage(outputImage, from: outputImage.extent) else {
+            return image
+        }
+        
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+    
     private func getRegionForCluster(_ cluster: MKClusterAnnotation) -> MKCoordinateRegion {
         // Handle edge case of empty cluster
         guard !cluster.memberAnnotations.isEmpty else {
@@ -482,9 +538,21 @@ extension AppleMapController: AnnotationDelegate {
 
         // Handle case where all coordinates are the same (single point)
         if minLat == maxLat && minLng == maxLng {
+            // Check current zoom level to force unclustering when zoomed in
+            let currentZoom = self.mapView.calculatedZoomLevel
+            
+            // If already zoomed in significantly (>= 18), force maximum zoom to uncluster
+            if currentZoom >= 18 {
+                return MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: minLat, longitude: minLng),
+                    span: MKCoordinateSpan(latitudeDelta: 0.0001, longitudeDelta: 0.0001)
+                )
+            }
+            
+            // Otherwise, zoom in progressively
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: minLat, longitude: minLng),
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
             )
         }
 

@@ -23,6 +23,7 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     var zIndex: Double = -1
     var calloutOffset: Offset = Offset()
     var systemImageName: String?
+    var desaturated: Bool = false
     var icon: AnnotationIcon = AnnotationIcon.init()
     var selectedProgrammatically: Bool = false
     
@@ -52,6 +53,10 @@ class FlutterAnnotation: NSObject, MKAnnotation {
             self.systemImageName = systemImageName
         }
         
+        if let desaturated = annotationData["desaturated"] as? Bool {
+            self.desaturated = desaturated
+        }
+        
         if let alpha: Double = annotationData["alpha"] as? Double {
             self.alpha = alpha
         }
@@ -61,7 +66,7 @@ class FlutterAnnotation: NSObject, MKAnnotation {
         }
         
         if let iconData: Array<Any> = annotationData["icon"] as? Array<Any> {
-            self.icon = FlutterAnnotation.getAnnotationIcon(iconData: iconData, registrar: registrar, annotationId: id)
+            self.icon = FlutterAnnotation.getAnnotationIcon(iconData: iconData, registrar: registrar, annotationId: id, desaturated: self.desaturated)
         }
         
         if let calloutOffsetJSON = infoWindow["anchor"] as? Array<Double> {
@@ -70,13 +75,14 @@ class FlutterAnnotation: NSObject, MKAnnotation {
     }
     
     
-    static private func getAnnotationIcon(iconData: Array<Any>, registrar: FlutterPluginRegistrar, annotationId: String) -> AnnotationIcon {
+    static private func getAnnotationIcon(iconData: Array<Any>, registrar: FlutterPluginRegistrar, annotationId: String, desaturated: Bool = false) -> AnnotationIcon {
         let iconTypeMap: Dictionary<String, IconType> = ["fromAssetImage": .CUSTOM_FROM_ASSET, "fromBytes": .CUSTOM_FROM_BYTES, "defaultAnnotation": .PIN, "markerAnnotation": .MARKER]
         guard let iconTypeString = iconData[0] as? String else {
             return AnnotationIcon(id: annotationId, iconType: .PIN)
         }
         let iconType: IconType = iconTypeMap[iconTypeString] ?? .PIN
         var icon: AnnotationIcon =  AnnotationIcon(id: annotationId, iconType: iconType)
+        icon.desaturated = desaturated
         var scaleParam: CGFloat?
 
         if iconType == .CUSTOM_FROM_ASSET {
@@ -85,24 +91,25 @@ class FlutterAnnotation: NSObject, MKAnnotation {
                 return icon
             }
             scaleParam = CGFloat(iconData[2] as? Double ?? 1.0)
-            icon = AnnotationIcon(withAsset: registrar.lookupKey(forAsset: assetPath), id: annotationId, iconScale: scaleParam)
+            icon = AnnotationIcon(withAsset: registrar.lookupKey(forAsset: assetPath), id: annotationId, iconScale: scaleParam, desaturated: desaturated)
         } else if iconType == .CUSTOM_FROM_BYTES {
             guard iconData.count > 1,
                   let bytes = iconData[1] as? FlutterStandardTypedData else {
                 return icon
             }
-            icon = AnnotationIcon(fromBytes: bytes, id: annotationId)
+            icon = AnnotationIcon(fromBytes: bytes, id: annotationId, desaturated: desaturated)
         } else if iconData.count > 1 {
             guard let hueColor = iconData[1] as? Double else {
                 return icon
             }
             icon = AnnotationIcon(id: annotationId, iconType: iconType, hueColor: hueColor)
+            icon.desaturated = desaturated
         }
         return icon
     }
     
     static func == (lhs: FlutterAnnotation, rhs: FlutterAnnotation) -> Bool {
-        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.subtitle == rhs.subtitle && lhs.image == rhs.image && lhs.alpha == rhs.alpha && lhs.isDraggable == rhs.isDraggable && lhs.wasDragged == rhs.wasDragged && lhs.isVisible == rhs.isVisible && lhs.icon == rhs.icon && lhs.coordinate.latitude == rhs.coordinate.latitude && lhs.coordinate.longitude == rhs.coordinate.longitude && lhs.infoWindowConsumesTapEvents == rhs.infoWindowConsumesTapEvents && lhs.anchor == rhs.anchor && lhs.calloutOffset == rhs.calloutOffset && lhs.zIndex == rhs.zIndex
+        return lhs.id == rhs.id && lhs.title == rhs.title && lhs.subtitle == rhs.subtitle && lhs.image == rhs.image && lhs.alpha == rhs.alpha && lhs.isDraggable == rhs.isDraggable && lhs.wasDragged == rhs.wasDragged && lhs.isVisible == rhs.isVisible && lhs.desaturated == rhs.desaturated && lhs.icon == rhs.icon && lhs.coordinate.latitude == rhs.coordinate.latitude && lhs.coordinate.longitude == rhs.coordinate.longitude && lhs.infoWindowConsumesTapEvents == rhs.infoWindowConsumesTapEvents && lhs.anchor == rhs.anchor && lhs.calloutOffset == rhs.calloutOffset && lhs.zIndex == rhs.zIndex
     }
     
     static func != (lhs: FlutterAnnotation, rhs: FlutterAnnotation) -> Bool {

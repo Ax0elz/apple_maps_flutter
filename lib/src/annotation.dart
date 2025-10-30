@@ -142,6 +142,7 @@ class Annotation {
   /// * has no info window text; [infoWindowText] is `InfoWindowText.noText`
   /// * is positioned at 0, 0; [position] is `LatLng(0.0, 0.0)`
   /// * is visible; [visible] is true
+  /// * is not desaturated; [desaturated] is false
   Annotation({
     required this.annotationId,
     this.alpha = 1.0,
@@ -155,6 +156,7 @@ class Annotation {
     this.zIndex = -1,
     this.onDragEnd,
     this.systemImageName,
+    this.desaturated = false,
   }) : assert(0.0 <= alpha && alpha <= 1.0);
 
   /// Uniquely identifies a [Annotation].
@@ -196,6 +198,13 @@ class Annotation {
 
   final String? systemImageName;
 
+  /// True if the annotation icon should be desaturated (greyed out).
+  ///
+  /// When true, the icon will be converted to grayscale, providing a clear
+  /// visual indication that the annotation is disabled or inactive.
+  /// This is more visually distinctive than using [alpha] alone.
+  final bool desaturated;
+
   /// The z-index of the annotation, used to determine relative drawing order of
   /// map overlays.
   ///
@@ -218,6 +227,7 @@ class Annotation {
     VoidCallback? onTapParam,
     ValueChanged<LatLng>? onDragEndParam,
     String? systemImageNameParam,
+    bool? desaturatedParam,
   }) {
     return Annotation(
       annotationId: annotationId,
@@ -232,6 +242,7 @@ class Annotation {
       zIndex: zIndexParam ?? zIndex,
       onDragEnd: onDragEndParam ?? onDragEnd,
       systemImageName: systemImageNameParam ?? systemImageName,
+      desaturated: desaturatedParam ?? desaturated,
     );
   }
 
@@ -254,6 +265,7 @@ class Annotation {
     addIfPresent('position', position._toJson());
     addIfPresent('zIndex', zIndex);
     addIfPresent('systemImageName', systemImageName);
+    addIfPresent('desaturated', desaturated);
     return json;
   }
 
@@ -271,6 +283,7 @@ class Annotation {
         position == typedOther.position &&
         visible == typedOther.visible &&
         systemImageName == typedOther.systemImageName &&
+        desaturated == typedOther.desaturated &&
         zIndex == typedOther.zIndex;
   }
 
@@ -281,7 +294,7 @@ class Annotation {
   String toString() {
     return 'Annotation{annotationId: $annotationId, alpha: $alpha, draggable: $draggable, '
         'icon: $icon, infoWindow: $infoWindow, position: $position ,visible: $visible, '
-        'onTap: $onTap}, zIndex: $zIndex, onTap: $onTap, onDragEnd: $onDragEnd, systemImageName: $systemImageName}';
+        'onTap: $onTap}, zIndex: $zIndex, onTap: $onTap, onDragEnd: $onDragEnd, systemImageName: $systemImageName, desaturated: $desaturated}';
   }
 }
 

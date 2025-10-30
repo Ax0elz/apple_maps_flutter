@@ -24,7 +24,7 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     // State tracking for unclustered annotations
     var unclusteredAnnotations: Set<String> = []
     var originalCoordinates: [String: CLLocationCoordinate2D] = [:]
-    var unclusterCenterPoint: CLLocationCoordinate2D?
+    var unclusterCenterPoints: [CLLocationCoordinate2D] = []
 
     deinit {
         // Cancel any ongoing snapshot operations to prevent memory leaks
@@ -355,6 +355,9 @@ extension AppleMapController: MKMapViewDelegate {
                 self.channel.invokeMethod("camera#onMove", arguments: ["position": ["heading": self.mapView.actualHeading, "target":  [locationOnMap.latitude, locationOnMap.longitude], "pitch": self.mapView.camera.pitch, "zoom": self.mapView.calculatedZoomLevel]])
             }
             
+            // Check if we should automatically uncluster same-location annotations
+            self.checkForAutoUnclustering()
+            
             // Check if we should re-cluster annotations
             self.checkForReclustering()
             
@@ -362,31 +365,80 @@ extension AppleMapController: MKMapViewDelegate {
         }
     }
     
+    /// Automatically unclusters annotations at the same location when zoomed in enough
+    private func checkForAutoUnclustering() {
+        let currentZoom = self.mapView.calculatedZoomLevel
+        
+        // Only auto-uncluster at zoom level 17 or higher
+        guard currentZoom >= 17 else {
+            return
+        }
+        
+        // Check all visible cluster annotations
+        if #available(iOS 11.0, *) {
+            for annotation in self.mapView.annotations {
+                guard let cluster = annotation as? MKClusterAnnotation else {
+                    continue
+                }
+                
+                // Skip empty clusters
+                guard !cluster.memberAnnotations.isEmpty else {
+                    continue
+                }
+                
+                // Check if all annotations in this cluster are at the same location
+                guard self.allAnnotationsAtSameLocation(cluster.memberAnnotations) else {
+                    continue
+                }
+                
+                // Check if any of these annotations are already unclustered
+                var alreadyUnclustered = false
+                for member in cluster.memberAnnotations {
+                    if let flutterAnnotation = member as? FlutterAnnotation,
+                       self.unclusteredAnnotations.contains(flutterAnnotation.id) {
+                        alreadyUnclustered = true
+                        break
+                    }
+                }
+                
+                // If not already unclustered, uncluster them now
+                if !alreadyUnclustered {
+                    self.unclusterAnnotationsAtSameLocation(cluster)
+                }
+            }
+        }
+    }
+    
     /// Checks if unclustered annotations should be re-clustered based on zoom/pan changes
     private func checkForReclustering() {
-        guard !self.unclusteredAnnotations.isEmpty,
-              let unclusterCenter = self.unclusterCenterPoint else {
+        guard !self.unclusteredAnnotations.isEmpty else {
             return
         }
         
         let currentZoom = self.mapView.calculatedZoomLevel
         let currentCenter = self.mapView.region.center
         
-        // Re-cluster if zoom level drops below 17
-        if currentZoom < 17 {
+        // Re-cluster if zoom level drops below 16
+        if currentZoom < 16 {
             self.reclusterAnnotations()
             return
         }
         
-        // Re-cluster if user panned away from the unclustered location
-        // Calculate distance from uncluster center
-        let latDiff = abs(currentCenter.latitude - unclusterCenter.latitude)
-        let lngDiff = abs(currentCenter.longitude - unclusterCenter.longitude)
+        // Re-cluster if user panned away from all unclustered locations
+        var needsReclustering = true
+        for unclusterCenter in self.unclusterCenterPoints {
+            let latDiff = abs(currentCenter.latitude - unclusterCenter.latitude)
+            let lngDiff = abs(currentCenter.longitude - unclusterCenter.longitude)
+            
+            // If within range of any unclustered group, don't re-cluster
+            if latDiff <= 0.01 && lngDiff <= 0.01 {
+                needsReclustering = false
+                break
+            }
+        }
         
-        // If moved more than 0.01 degrees (~1km), re-cluster
-        if latDiff > 0.01 || lngDiff > 0.01 {
+        if needsReclustering {
             self.reclusterAnnotations()
-            return
         }
     }
 

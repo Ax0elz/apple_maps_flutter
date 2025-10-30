@@ -18,18 +18,7 @@ extension AppleMapController: AnnotationDelegate {
                 return
             }
             
-            // Check if all annotations are at the same exact location
-            if allAnnotationsAtSameLocation(cluster.memberAnnotations) {
-                // If we're already zoomed in very far, uncluster the annotations
-                let currentZoom = self.mapView.calculatedZoomLevel
-                if currentZoom >= 19 {
-                    // Uncluster annotations by spreading them in a circle
-                    mapView.deselectAnnotation(cluster, animated: false)
-                    unclusterAnnotationsAtSameLocation(cluster)
-                    return
-                }
-            }
-
+            // For clusters at the same location, just zoom in (unclustering will happen automatically)
             let region = self.getRegionForCluster(cluster)
             mapView.setRegion(region, animated: true)
             return
@@ -745,8 +734,14 @@ extension AppleMapController: AnnotationDelegate {
         let centerCoordinate = firstAnnotation.coordinate
         let memberCount = cluster.memberAnnotations.count
         
-        // Store the center point for re-clustering detection
-        self.unclusterCenterPoint = centerCoordinate
+        // Store the center point for re-clustering detection (if not already stored)
+        let centerAlreadyTracked = self.unclusterCenterPoints.contains { existingCenter in
+            abs(existingCenter.latitude - centerCoordinate.latitude) < 0.0000001 &&
+            abs(existingCenter.longitude - centerCoordinate.longitude) < 0.0000001
+        }
+        if !centerAlreadyTracked {
+            self.unclusterCenterPoints.append(centerCoordinate)
+        }
         
         // Remove annotations from map temporarily
         var annotationsToUpdate: [FlutterAnnotation] = []
@@ -833,7 +828,7 @@ extension AppleMapController: AnnotationDelegate {
         // Clear unclustered state
         self.unclusteredAnnotations.removeAll()
         self.originalCoordinates.removeAll()
-        self.unclusterCenterPoint = nil
+        self.unclusterCenterPoints.removeAll()
         
         // Remove and re-add annotations to trigger clustering
         self.mapView.removeAnnotations(annotationsToUpdate)

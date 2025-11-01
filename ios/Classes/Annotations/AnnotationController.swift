@@ -501,7 +501,7 @@ extension AppleMapController: AnnotationDelegate {
 
     // MARK: - Helper Methods
     
-    private func allAnnotationsAtSameLocation(_ annotations: [MKAnnotation]) -> Bool {
+    func allAnnotationsAtSameLocation(_ annotations: [MKAnnotation]) -> Bool {
         guard let firstCoord = annotations.first?.coordinate else { return false }
         
         for annotation in annotations.dropFirst() {
@@ -726,7 +726,7 @@ extension AppleMapController: AnnotationDelegate {
     // MARK: - Unclustering Logic
     
     /// Unclusters annotations at the same location by spreading them in a circular pattern
-    private func unclusterAnnotationsAtSameLocation(_ cluster: MKClusterAnnotation) {
+    func unclusterAnnotationsAtSameLocation(_ cluster: MKClusterAnnotation) {
         guard let firstAnnotation = cluster.memberAnnotations.first else {
             return
         }

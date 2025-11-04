@@ -507,8 +507,8 @@ extension AppleMapController: AnnotationDelegate {
         for annotation in annotations.dropFirst() {
             let coord = annotation.coordinate
             // Check if coordinates are essentially the same (within a very small threshold)
-            if abs(coord.latitude - firstCoord.latitude) > 0.0000001 || 
-               abs(coord.longitude - firstCoord.longitude) > 0.0000001 {
+            if abs(coord.latitude - firstCoord.latitude) > 0.00001 || 
+               abs(coord.longitude - firstCoord.longitude) > 0.00001 {
                 return false
             }
         }

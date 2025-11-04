@@ -28,6 +28,7 @@ public class AppleMapController: NSObject, FlutterPlatformView {
 
     // Add at class level
     private var lastZoomLevel: Double = 0.0
+    private var skipNextRecluster: Bool = false
 
     deinit {
         // Cancel any ongoing snapshot operations to prevent memory leaks
@@ -412,6 +413,11 @@ extension AppleMapController: MKMapViewDelegate {
     
     /// Checks if unclustered annotations should be re-clustered based on zoom/pan changes
     private func checkForReclustering() {
+        if self.skipNextRecluster {
+            self.skipNextRecluster = false
+            return
+        }
+        
         guard !self.unclusteredAnnotations.isEmpty else {
             return
         }

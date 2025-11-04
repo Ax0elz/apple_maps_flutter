@@ -369,8 +369,8 @@ extension AppleMapController: MKMapViewDelegate {
     private func checkForAutoUnclustering() {
         let currentZoom = self.mapView.calculatedZoomLevel
         
-        // Only auto-uncluster at zoom level 17 or higher
-        guard currentZoom >= 17 else {
+        // Only auto-uncluster at zoom level 18 or higher
+        guard currentZoom >= 18 else {
             return
         }
         
@@ -416,28 +416,9 @@ extension AppleMapController: MKMapViewDelegate {
         }
         
         let currentZoom = self.mapView.calculatedZoomLevel
-        let currentCenter = self.mapView.region.center
         
-        // Re-cluster if zoom level drops below 16
-        if currentZoom < 16 {
-            self.reclusterAnnotations()
-            return
-        }
-        
-        // Re-cluster if user panned away from all unclustered locations
-        var needsReclustering = true
-        for unclusterCenter in self.unclusterCenterPoints {
-            let latDiff = abs(currentCenter.latitude - unclusterCenter.latitude)
-            let lngDiff = abs(currentCenter.longitude - unclusterCenter.longitude)
-            
-            // If within range of any unclustered group, don't re-cluster
-            if latDiff <= 0.01 && lngDiff <= 0.01 {
-                needsReclustering = false
-                break
-            }
-        }
-        
-        if needsReclustering {
+        // Re-cluster only if zoom level drops below 17
+        if currentZoom < 17 {
             self.reclusterAnnotations()
         }
     }

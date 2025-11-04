@@ -26,6 +26,9 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     var originalCoordinates: [String: CLLocationCoordinate2D] = [:]
     var unclusterCenterPoints: [CLLocationCoordinate2D] = []
 
+    // Add at class level
+    private var lastZoomLevel: Double = 0.0
+
     deinit {
         // Cancel any ongoing snapshot operations to prevent memory leaks
         snapShot?.cancel()
@@ -369,41 +372,39 @@ extension AppleMapController: MKMapViewDelegate {
     private func checkForAutoUnclustering() {
         let currentZoom = self.mapView.calculatedZoomLevel
         
-        // Only auto-uncluster at zoom level 18 or higher
-        guard currentZoom >= 18 else {
-            return
-        }
-        
-        // Check all visible cluster annotations
-        if #available(iOS 11.0, *) {
-            for annotation in self.mapView.annotations {
-                guard let cluster = annotation as? MKClusterAnnotation else {
-                    continue
-                }
-                
-                // Skip empty clusters
-                guard !cluster.memberAnnotations.isEmpty else {
-                    continue
-                }
-                
-                // Check if all annotations in this cluster are at the same location
-                guard self.allAnnotationsAtSameLocation(cluster.memberAnnotations) else {
-                    continue
-                }
-                
-                // Check if any of these annotations are already unclustered
-                var alreadyUnclustered = false
-                for member in cluster.memberAnnotations {
-                    if let flutterAnnotation = member as? FlutterAnnotation,
-                       self.unclusteredAnnotations.contains(flutterAnnotation.id) {
-                        alreadyUnclustered = true
-                        break
+        // Only uncluster when zooming in and reaching 18 or higher
+        if currentZoom > self.lastZoomLevel && currentZoom >= 18 {
+            // Check all visible cluster annotations
+            if #available(iOS 11.0, *) {
+                for annotation in self.mapView.annotations {
+                    guard let cluster = annotation as? MKClusterAnnotation else {
+                        continue
                     }
-                }
-                
-                // If not already unclustered, uncluster them now
-                if !alreadyUnclustered {
-                    self.unclusterAnnotationsAtSameLocation(cluster)
+                    
+                    // Skip empty clusters
+                    guard !cluster.memberAnnotations.isEmpty else {
+                        continue
+                    }
+                    
+                    // Check if all annotations in this cluster are at the same location
+                    guard self.allAnnotationsAtSameLocation(cluster.memberAnnotations) else {
+                        continue
+                    }
+                    
+                    // Check if any of these annotations are already unclustered
+                    var alreadyUnclustered = false
+                    for member in cluster.memberAnnotations {
+                        if let flutterAnnotation = member as? FlutterAnnotation,
+                           self.unclusteredAnnotations.contains(flutterAnnotation.id) {
+                            alreadyUnclustered = true
+                            break
+                        }
+                    }
+                    
+                    // If not already unclustered, uncluster them now
+                    if !alreadyUnclustered {
+                        self.unclusterAnnotationsAtSameLocation(cluster)
+                    }
                 }
             }
         }
@@ -417,8 +418,8 @@ extension AppleMapController: MKMapViewDelegate {
         
         let currentZoom = self.mapView.calculatedZoomLevel
         
-        // Re-cluster only if zoom level drops below 17
-        if currentZoom < 17 {
+        // Re-cluster only when zooming out below 17
+        if currentZoom < self.lastZoomLevel && currentZoom < 17 {
             self.reclusterAnnotations()
         }
     }

@@ -507,8 +507,8 @@ extension AppleMapController: AnnotationDelegate {
         for annotation in annotations.dropFirst() {
             let coord = annotation.coordinate
             // Check if coordinates are essentially the same (within a very small threshold)
-            if abs(coord.latitude - firstCoord.latitude) > 0.00001 || 
-               abs(coord.longitude - firstCoord.longitude) > 0.00001 {
+            if abs(coord.latitude - firstCoord.latitude) > 0.0000001 || 
+               abs(coord.longitude - firstCoord.longitude) > 0.0000001 {
                 return false
             }
         }
@@ -779,18 +779,17 @@ extension AppleMapController: AnnotationDelegate {
     
     /// Calculates an offset coordinate for spreading annotations in a circle
     private func calculateOffsetCoordinate(center: CLLocationCoordinate2D, index: Int, total: Int) -> CLLocationCoordinate2D {
-        // Radius in meters - adjust based on zoom level for visual clarity
-        // Higher zoom = more spacing for better visibility
+        
         let currentZoom = self.mapView.calculatedZoomLevel
         let radiusMeters: Double
         if currentZoom >= 20 {
-            radiusMeters = 500.0  // Larger spread at max zoom
+            radiusMeters = 80.0  // Most zoomed in = most spacing
         } else if currentZoom >= 19 {
-            radiusMeters = 300.0
+            radiusMeters = 60.0
         } else if currentZoom >= 18 {
-            radiusMeters = 200.0
+            radiusMeters = 40.0
         } else {
-            radiusMeters = 100.0  // Minimum spread
+            radiusMeters = 30.0  // Less zoomed in = less spacing
         }
         
         // Calculate angle for this annotation (evenly distributed around circle)

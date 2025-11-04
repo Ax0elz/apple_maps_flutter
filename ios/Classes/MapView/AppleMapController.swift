@@ -26,10 +26,6 @@ public class AppleMapController: NSObject, FlutterPlatformView {
     var originalCoordinates: [String: CLLocationCoordinate2D] = [:]
     var unclusterCenterPoints: [CLLocationCoordinate2D] = []
 
-    // Add at class level
-    private var lastZoomLevel: Double = 0.0
-    private var skipNextRecluster: Bool = false
-
     deinit {
         // Cancel any ongoing snapshot operations to prevent memory leaks
         snapShot?.cancel()
@@ -373,39 +369,41 @@ extension AppleMapController: MKMapViewDelegate {
     private func checkForAutoUnclustering() {
         let currentZoom = self.mapView.calculatedZoomLevel
         
-        // Only uncluster when zooming in and reaching 18 or higher
-        if currentZoom > self.lastZoomLevel && currentZoom >= 18 {
-            // Check all visible cluster annotations
-            if #available(iOS 11.0, *) {
-                for annotation in self.mapView.annotations {
-                    guard let cluster = annotation as? MKClusterAnnotation else {
-                        continue
+        // Only auto-uncluster at zoom level 17 or higher
+        guard currentZoom >= 17 else {
+            return
+        }
+        
+        // Check all visible cluster annotations
+        if #available(iOS 11.0, *) {
+            for annotation in self.mapView.annotations {
+                guard let cluster = annotation as? MKClusterAnnotation else {
+                    continue
+                }
+                
+                // Skip empty clusters
+                guard !cluster.memberAnnotations.isEmpty else {
+                    continue
+                }
+                
+                // Check if all annotations in this cluster are at the same location
+                guard self.allAnnotationsAtSameLocation(cluster.memberAnnotations) else {
+                    continue
+                }
+                
+                // Check if any of these annotations are already unclustered
+                var alreadyUnclustered = false
+                for member in cluster.memberAnnotations {
+                    if let flutterAnnotation = member as? FlutterAnnotation,
+                       self.unclusteredAnnotations.contains(flutterAnnotation.id) {
+                        alreadyUnclustered = true
+                        break
                     }
-                    
-                    // Skip empty clusters
-                    guard !cluster.memberAnnotations.isEmpty else {
-                        continue
-                    }
-                    
-                    // Check if all annotations in this cluster are at the same location
-                    guard self.allAnnotationsAtSameLocation(cluster.memberAnnotations) else {
-                        continue
-                    }
-                    
-                    // Check if any of these annotations are already unclustered
-                    var alreadyUnclustered = false
-                    for member in cluster.memberAnnotations {
-                        if let flutterAnnotation = member as? FlutterAnnotation,
-                           self.unclusteredAnnotations.contains(flutterAnnotation.id) {
-                            alreadyUnclustered = true
-                            break
-                        }
-                    }
-                    
-                    // If not already unclustered, uncluster them now
-                    if !alreadyUnclustered {
-                        self.unclusterAnnotationsAtSameLocation(cluster)
-                    }
+                }
+                
+                // If not already unclustered, uncluster them now
+                if !alreadyUnclustered {
+                    self.unclusterAnnotationsAtSameLocation(cluster)
                 }
             }
         }
@@ -413,19 +411,33 @@ extension AppleMapController: MKMapViewDelegate {
     
     /// Checks if unclustered annotations should be re-clustered based on zoom/pan changes
     private func checkForReclustering() {
-        if self.skipNextRecluster {
-            self.skipNextRecluster = false
-            return
-        }
-        
         guard !self.unclusteredAnnotations.isEmpty else {
             return
         }
         
         let currentZoom = self.mapView.calculatedZoomLevel
+        let currentCenter = self.mapView.region.center
         
-        // Re-cluster only when zooming out below 17
-        if currentZoom < self.lastZoomLevel && currentZoom < 17 {
+        // Re-cluster if zoom level drops below 16
+        if currentZoom < 16 {
+            self.reclusterAnnotations()
+            return
+        }
+        
+        // Re-cluster if user panned away from all unclustered locations
+        var needsReclustering = true
+        for unclusterCenter in self.unclusterCenterPoints {
+            let latDiff = abs(currentCenter.latitude - unclusterCenter.latitude)
+            let lngDiff = abs(currentCenter.longitude - unclusterCenter.longitude)
+            
+            // If within range of any unclustered group, don't re-cluster
+            if latDiff <= 0.01 && lngDiff <= 0.01 {
+                needsReclustering = false
+                break
+            }
+        }
+        
+        if needsReclustering {
             self.reclusterAnnotations()
         }
     }

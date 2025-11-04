@@ -780,14 +780,17 @@ extension AppleMapController: AnnotationDelegate {
     /// Calculates an offset coordinate for spreading annotations in a circle
     private func calculateOffsetCoordinate(center: CLLocationCoordinate2D, index: Int, total: Int) -> CLLocationCoordinate2D {
         // Radius in meters - adjust based on zoom level for visual clarity
+        // Higher zoom = more spacing for better visibility
         let currentZoom = self.mapView.calculatedZoomLevel
         let radiusMeters: Double
         if currentZoom >= 20 {
-            radiusMeters = 10.0
+            radiusMeters = 80.0  // Most zoomed in = most spacing
         } else if currentZoom >= 19 {
-            radiusMeters = 15.0
+            radiusMeters = 60.0
+        } else if currentZoom >= 18 {
+            radiusMeters = 40.0
         } else {
-            radiusMeters = 20.0
+            radiusMeters = 30.0  // Less zoomed in = less spacing
         }
         
         // Calculate angle for this annotation (evenly distributed around circle)

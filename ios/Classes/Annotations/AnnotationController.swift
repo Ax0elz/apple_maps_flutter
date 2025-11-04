@@ -784,13 +784,13 @@ extension AppleMapController: AnnotationDelegate {
         let currentZoom = self.mapView.calculatedZoomLevel
         let radiusMeters: Double
         if currentZoom >= 20 {
-            radiusMeters = 80.0  // Most zoomed in = most spacing
+            radiusMeters = 500.0  // Larger spread at max zoom
         } else if currentZoom >= 19 {
-            radiusMeters = 60.0
+            radiusMeters = 300.0
         } else if currentZoom >= 18 {
-            radiusMeters = 40.0
+            radiusMeters = 200.0
         } else {
-            radiusMeters = 30.0  // Less zoomed in = less spacing
+            radiusMeters = 100.0  // Minimum spread
         }
         
         // Calculate angle for this annotation (evenly distributed around circle)

@@ -210,6 +210,19 @@ class AppleMapController {
     );
   }
 
+  /// Programmatically deselect all currently selected markers.
+  ///
+  /// This will dismiss any visible info windows and remove the
+  /// selection state from all markers on the map.
+  ///
+  /// * See also:
+  ///   * [showMarkerInfoWindow] to show the Info Window.
+  ///   * [hideMarkerInfoWindow] to hide a specific marker's Info Window.
+  Future<void> deselectAnnotation() {
+    return channel
+        .invokeMethod<void>('annotations#deselectAll', <String, dynamic>{});
+  }
+
   /// Changes the map camera position without animating the transition.
   ///
   /// The returned [Future] completes after the change has been made on the

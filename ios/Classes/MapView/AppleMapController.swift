@@ -107,6 +107,10 @@ public class AppleMapController: NSObject, FlutterPlatformView {
                     }
                     result(strongSelf.isAnnotationSelected(with: annotationId))
                     break
+                case "annotations#deselectAll":
+                    strongSelf.deselectAllAnnotations()
+                    result(nil)
+                    break
                 case "polylines#update":
                     strongSelf.polylineUpdate(args: args)
                     result(nil)

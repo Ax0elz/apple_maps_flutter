@@ -227,6 +227,13 @@ extension AppleMapController: AnnotationDelegate {
             self.mapView.deselectAnnotation(annotation, animated: true)
         }
     }
+    
+    func deselectAllAnnotations() {
+        for annotation in self.mapView.selectedAnnotations {
+            self.mapView.deselectAnnotation(annotation, animated: true)
+        }
+        self.currentlySelectedAnnotation = nil
+    }
 
     func isAnnotationSelected(with id: String) -> Bool {
         return self.mapView.selectedAnnotations.contains(where: { annotation in return self.getAnnotation(with: id) == (annotation as? FlutterAnnotation)})

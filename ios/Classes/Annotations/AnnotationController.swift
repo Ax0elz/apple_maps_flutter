@@ -629,8 +629,14 @@ extension AppleMapController: AnnotationDelegate {
         badgeContainer.layer.borderWidth = 1.0
         badgeContainer.layer.borderColor = UIColor.black.withAlphaComponent(0.2).cgColor
         
+        // Ensure badge is always rendered above the marker
+        badgeContainer.layer.zPosition = 1000
+        
         // Add the badge to the annotation view
         annotationView.addSubview(badgeContainer)
+        
+        // Bring badge to front of subview hierarchy
+        annotationView.bringSubviewToFront(badgeContainer)
     }
     
     private func getRegionForCluster(_ cluster: MKClusterAnnotation) -> MKCoordinateRegion {
